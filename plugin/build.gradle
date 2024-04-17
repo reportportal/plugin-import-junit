@@ -98,7 +98,7 @@ jar {
                 "Plugin-Id": "${pluginId}",
                 "Plugin-Version": "${project.version}",
                 "Plugin-Provider": "Report Portal",
-                "Plugin-Class": "com.epam.reportportal.extension.template.TemplatePlugin",
+                "Plugin-Class": "com.epam.reportportal.extension.importing.ImportJUnitPlugin",
                 "Plugin-Service": "api"
         )
     }
@@ -137,5 +137,5 @@ task assemblePlugins(type: Copy) {
     dependsOn subprojects.assemblePlugin
 }
 
-compileJava.dependsOn npm_run_build
+//compileJava.dependsOn npm_run_build
 

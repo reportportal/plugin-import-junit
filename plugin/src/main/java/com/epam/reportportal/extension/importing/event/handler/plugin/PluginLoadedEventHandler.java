@@ -1,8 +1,8 @@
-package com.epam.reportportal.extension.template.event.handler.plugin;
+package com.epam.reportportal.extension.importing.event.handler.plugin;
 
 import com.epam.reportportal.extension.event.PluginEvent;
-import com.epam.reportportal.extension.template.TemplatePluginExtension;
-import com.epam.reportportal.extension.template.event.handler.EventHandler;
+import com.epam.reportportal.extension.importing.ImportJUnitPluginExtension;
+import com.epam.reportportal.extension.importing.event.handler.EventHandler;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.dao.IntegrationRepository;
@@ -67,7 +67,7 @@ public class PluginLoadedEventHandler implements EventHandler<PluginEvent> {
 		Map<String, Object> details = integrationType.getDetails().getDetails();
 		if (ofNullable(details.get(BINARY_DATA)).isEmpty()) {
 			try (InputStream propertiesStream = Files.newInputStream(Paths.get(resourcesDir,
-					TemplatePluginExtension.BINARY_DATA_PROPERTIES_FILE_ID
+					ImportJUnitPluginExtension.BINARY_DATA_PROPERTIES_FILE_ID
 			))) {
 				Properties binaryDataProperties = new Properties();
 				binaryDataProperties.load(propertiesStream);
