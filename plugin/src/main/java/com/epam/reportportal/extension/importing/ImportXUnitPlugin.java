@@ -6,7 +6,7 @@ import org.pf4j.PluginWrapper;
 /**
  * @author Andrei Piankouski
  */
-public class ImportJUnitPlugin extends Plugin {
+public class ImportXUnitPlugin extends Plugin {
     /**
      * Constructor to be used by plugin manager for plugin instantiation.
      * Your plugins have to provide constructor with this exact signature to
@@ -14,7 +14,7 @@ public class ImportJUnitPlugin extends Plugin {
      *
      * @param wrapper - A wrapper over plugin instance.
      */
-    public ImportJUnitPlugin(PluginWrapper wrapper) {
+    public ImportXUnitPlugin(PluginWrapper wrapper) {
         super(wrapper);
     }
 }

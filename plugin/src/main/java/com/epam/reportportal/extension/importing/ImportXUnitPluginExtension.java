@@ -5,14 +5,14 @@ import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
 import com.epam.reportportal.extension.event.PluginEvent;
-import com.epam.reportportal.extension.importing.command.JUnitImportCommand;
+import com.epam.reportportal.extension.importing.command.XUnitImportCommand;
 import com.epam.reportportal.extension.importing.event.plugin.PluginEventHandlerFactory;
 import com.epam.reportportal.extension.importing.event.plugin.PluginEventListener;
 import com.epam.reportportal.extension.importing.utils.MemoizingSupplier;
 import com.epam.reportportal.extension.util.RequestEntityConverter;
 import com.epam.ta.reportportal.dao.IntegrationRepository;
 import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
-import com.epam.ta.reportportal.dao.LogRepository;
+import com.epam.ta.reportportal.dao.LaunchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,6 +23,7 @@ import org.pf4j.Extension;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -31,7 +32,7 @@ import org.springframework.context.support.AbstractApplicationContext;
  * @author Andrei Piankouski
  */
 @Extension
-public class ImportJUnitPluginExtension implements ReportPortalExtensionPoint, DisposableBean {
+public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, DisposableBean {
 
   private static final String PLUGIN_ID = "JUnit";
   public static final String BINARY_DATA_PROPERTIES_FILE_ID = "binary-data.properties";
@@ -55,12 +56,15 @@ public class ImportJUnitPluginExtension implements ReportPortalExtensionPoint, D
   private IntegrationRepository integrationRepository;
 
   @Autowired
-  private LogRepository logRepository;
+  private LaunchRepository launchRepository;
+
+  @Autowired
+  private ApplicationEventPublisher eventPublisher;
 
   @Autowired
   private ApplicationContext applicationContext;
 
-  public ImportJUnitPluginExtension(Map<String, Object> initParams) {
+  public ImportXUnitPluginExtension(Map<String, Object> initParams) {
     resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams)
         .map(String::valueOf).orElse("");
 
@@ -122,8 +126,9 @@ public class ImportJUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   private Map<String, CommonPluginCommand<?>> getCommonCommands() {
     HashMap<String, CommonPluginCommand<?>> pluginCommands = new HashMap<>();
-    JUnitImportCommand junitImportCommand = new JUnitImportCommand(requestEntityConverter);
-    pluginCommands.put(junitImportCommand.getName(), junitImportCommand);
+    XUnitImportCommand xunitImportCommand = new XUnitImportCommand(requestEntityConverter,
+        eventPublisher, launchRepository);
+    pluginCommands.put(xunitImportCommand.getName(), xunitImportCommand);
     return pluginCommands;
   }
 }

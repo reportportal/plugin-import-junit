@@ -16,14 +16,37 @@ public class LaunchImportRQ {
   private String description;
 
   @JsonProperty("attributes")
-  @JsonAlias({ "attributes", "tags" })
+  @JsonAlias({"attributes", "tags"})
   private Set<ItemAttributesRQ> attributes;
 
   @JsonProperty
-  @JsonAlias({ "startTime", "start_time" })
+  @JsonAlias({"startTime", "start_time"})
   private Instant startTime;
 
   @JsonProperty("mode")
   private Mode mode;
 
+  public String getName() {
+    return name;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public Set<ItemAttributesRQ> getAttributes() {
+    return attributes;
+  }
+
+  public Instant getStartTime() {
+    return startTime;
+  }
+
+  public Mode getMode() {
+    return mode;
+  }
+
+  public void setStartTime(Instant startTime) {
+    this.startTime = startTime;
+  }
 }
