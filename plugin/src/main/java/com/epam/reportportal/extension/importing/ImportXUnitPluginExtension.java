@@ -5,6 +5,7 @@ import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
 import com.epam.reportportal.extension.event.PluginEvent;
+import com.epam.reportportal.extension.importing.command.FileFormatsCommand;
 import com.epam.reportportal.extension.importing.command.XUnitImportCommand;
 import com.epam.reportportal.extension.importing.event.plugin.PluginEventHandlerFactory;
 import com.epam.reportportal.extension.importing.event.plugin.PluginEventListener;
@@ -126,9 +127,11 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   private Map<String, CommonPluginCommand<?>> getCommonCommands() {
     HashMap<String, CommonPluginCommand<?>> pluginCommands = new HashMap<>();
-    XUnitImportCommand xunitImportCommand = new XUnitImportCommand(requestEntityConverter,
+    var xunitImportCommand = new XUnitImportCommand(requestEntityConverter,
         eventPublisher, launchRepository);
+    var fileFormatsCommand = new FileFormatsCommand();
     pluginCommands.put(xunitImportCommand.getName(), xunitImportCommand);
+    pluginCommands.put(fileFormatsCommand.getName(), fileFormatsCommand);
     return pluginCommands;
   }
 }
