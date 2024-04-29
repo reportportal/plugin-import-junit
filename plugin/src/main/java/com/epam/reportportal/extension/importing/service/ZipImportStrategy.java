@@ -68,6 +68,7 @@ public class ZipImportStrategy extends AbstractImportStrategy {
                   isSkippedNotIssue(rq.getAttributes()))).collect(Collectors.toList());
       ParseResults results = processResults(parseResults);
       finishLaunch(launchUuid, projectName, results);
+      updateStartTime(launchUuid, results.getStartTime());
       return launchUuid;
     } catch (Exception e) {
       e.printStackTrace();
