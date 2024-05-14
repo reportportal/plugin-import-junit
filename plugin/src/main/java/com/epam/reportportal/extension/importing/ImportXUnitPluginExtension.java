@@ -3,6 +3,7 @@ package com.epam.reportportal.extension.importing;
 import static com.epam.reportportal.extension.importing.command.XUnitImportCommand.MAX_FILE_SIZE;
 
 import com.epam.reportportal.extension.CommonPluginCommand;
+import com.epam.reportportal.extension.IntegrationGroupEnum;
 import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
@@ -126,6 +127,11 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
   @Override
   public PluginCommand getIntegrationCommand(String commandName) {
     return pluginCommandMapping.get().get(commandName);
+  }
+
+  @Override
+  public IntegrationGroupEnum getIntegrationGroup() {
+    return IntegrationGroupEnum.IMPORT;
   }
 
   private Map<String, PluginCommand> getCommands() {
