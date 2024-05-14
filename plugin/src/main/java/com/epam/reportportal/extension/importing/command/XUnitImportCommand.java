@@ -9,6 +9,8 @@ import static com.epam.reportportal.rules.exception.ErrorType.INCORRECT_REQUEST;
 import static org.apache.commons.io.FileUtils.ONE_MB;
 
 import com.epam.reportportal.extension.CommonPluginCommand;
+import com.epam.reportportal.extension.importing.model.LaunchImportCompletionRS;
+import com.epam.reportportal.extension.importing.model.LaunchImportData;
 import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
 import com.epam.reportportal.extension.importing.service.ImportStrategy;
 import com.epam.reportportal.extension.importing.service.ImportStrategyFactory;
@@ -28,17 +30,19 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public class XUnitImportCommand implements CommonPluginCommand<OperationCompletionRS> {
 
+  public static final long MAX_FILE_SIZE = 32 * ONE_MB;
   private static final String FILE_PARAM = "file";
-  private static final long MAX_FILE_SIZE = 32 * ONE_MB;
   private static final String PROJECT_NAME = "projectName";
 
   private final RequestEntityConverter requestEntityConverter;
   private final ImportStrategyFactory importStrategyFactory;
+  private final LaunchRepository launchRepository;
 
   public XUnitImportCommand(RequestEntityConverter requestEntityConverter,
       ApplicationEventPublisher eventPublisher,
       LaunchRepository launchRepository) {
     this.requestEntityConverter = requestEntityConverter;
+    this.launchRepository = launchRepository;
     this.importStrategyFactory = new ImportStrategyFactory(eventPublisher, launchRepository);
   }
 
@@ -62,8 +66,8 @@ public class XUnitImportCommand implements CommonPluginCommand<OperationCompleti
         .orElseThrow(
             () -> new ReportPortalException(BAD_REQUEST_ERROR, "Project name wasn't provided"));
 
-    importStrategy.importLaunch(file, projectName, launchImportRQ);
-    return new OperationCompletionRS("Import started");
+    String launchUuid = importStrategy.importLaunch(file, projectName, launchImportRQ);
+    return prepareLaunchImportResponse(launchUuid);
   }
 
   @Override
@@ -83,5 +87,22 @@ public class XUnitImportCommand implements CommonPluginCommand<OperationCompleti
     expect(file.getSize(), size -> size <= MAX_FILE_SIZE).verify(INCORRECT_REQUEST,
         "File size is more than 32 Mb."
     );
+  }
+
+  private OperationCompletionRS prepareLaunchImportResponse(String launchId) {
+
+    var launch = launchRepository.findByUuid(launchId)
+        .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND));
+
+    var data = new LaunchImportData();
+    data.setId(launchId);
+    data.setName(launch.getName());
+    data.setNumber(launch.getNumber());
+
+    var response = new LaunchImportCompletionRS();
+    response.setResultMessage("Launch with id = " + launchId + " is successfully imported.");
+    response.setData(data);
+
+    return response;
   }
 }

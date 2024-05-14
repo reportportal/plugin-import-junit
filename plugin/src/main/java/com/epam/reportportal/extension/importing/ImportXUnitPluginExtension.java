@@ -1,5 +1,7 @@
 package com.epam.reportportal.extension.importing;
 
+import static com.epam.reportportal.extension.importing.command.XUnitImportCommand.MAX_FILE_SIZE;
+
 import com.epam.reportportal.extension.CommonPluginCommand;
 import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
@@ -17,6 +19,7 @@ import com.epam.ta.reportportal.dao.LaunchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import javax.annotation.PostConstruct;
@@ -108,6 +111,10 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     Map<String, Object> params = new HashMap<>();
     params.put(ALLOWED_COMMANDS, new ArrayList<>(pluginCommandMapping.get().keySet()));
     params.put(COMMON_COMMANDS, new ArrayList<>(commonPluginCommandMapping.get().keySet()));
+    params.put("MAX_FILE_SIZES", MAX_FILE_SIZE);
+    params.put("ACCEPT_FILE_MIME_TYPES",
+        List.of("application/zip", "application/x-zip-compressed", "application/zip-compressed",
+            "application/xml", "text/xml"));
     return params;
   }
 

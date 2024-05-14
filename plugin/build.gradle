@@ -47,6 +47,8 @@ dependencies {
         annotationProcessor 'com.github.reportportal:plugin-api:17962f8'
     }
     implementation('org.hibernate:hibernate-core:5.4.18.Final')
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.7'
+
 }
 
 spotbugs {
