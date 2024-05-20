@@ -18,6 +18,8 @@ import com.epam.ta.reportportal.dao.IntegrationRepository;
 import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
 import com.epam.ta.reportportal.dao.LaunchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -78,7 +80,10 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
             integrationRepository)
     ));
 
-    requestEntityConverter = new RequestEntityConverter(new ObjectMapper());
+    ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.registerModule(new JavaTimeModule());
+    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    requestEntityConverter = new RequestEntityConverter(objectMapper);
   }
 
   @PostConstruct

@@ -1,5 +1,5 @@
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = JavaVersion.VERSION_21
 
 project.ext {
     releaseMode = project.hasProperty("releaseMode")
@@ -8,5 +8,5 @@ project.ext {
 }
 
 wrapper {
-    gradleVersion = '6.0'
+    gradleVersion = '8.5'
 }
