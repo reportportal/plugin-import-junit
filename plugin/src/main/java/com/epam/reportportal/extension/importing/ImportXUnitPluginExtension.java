@@ -117,8 +117,8 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     Map<String, Object> params = new HashMap<>();
     params.put(ALLOWED_COMMANDS, new ArrayList<>(pluginCommandMapping.get().keySet()));
     params.put(COMMON_COMMANDS, new ArrayList<>(commonPluginCommandMapping.get().keySet()));
-    params.put("MAX_FILE_SIZES", MAX_FILE_SIZE);
-    params.put("ACCEPT_FILE_MIME_TYPES",
+    params.put("maxFileSize", MAX_FILE_SIZE);
+    params.put("acceptFileMimeTypes",
         List.of("application/zip", "application/x-zip-compressed", "application/zip-compressed",
             "application/xml", "text/xml"));
     return params;
