@@ -51,7 +51,7 @@ public class XmlImportStrategy extends AbstractImportStrategy {
       updateStartTime(launchUuid, parseResults.getStartTime());
       return launchUuid;
     } catch (Exception e) {
-      Optional.ofNullable(launchUuid).ifPresent(it -> updateBrokenLaunch(it, projectName));
+      Optional.ofNullable(launchUuid).ifPresent(this::updateBrokenLaunch);
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, cleanMessage(e));
     }
   }

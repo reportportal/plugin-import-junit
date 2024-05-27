@@ -8,7 +8,6 @@ import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
 import com.epam.reportportal.extension.event.PluginEvent;
-import com.epam.reportportal.extension.importing.command.FileFormatsCommand;
 import com.epam.reportportal.extension.importing.command.XUnitImportCommand;
 import com.epam.reportportal.extension.importing.event.plugin.PluginEventHandlerFactory;
 import com.epam.reportportal.extension.importing.event.plugin.PluginEventListener;
@@ -121,6 +120,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     params.put("acceptFileMimeTypes",
         List.of("application/zip", "application/x-zip-compressed", "application/zip-compressed",
             "application/xml", "text/xml"));
+    params.put("metadata", Map.of("isIntegrationAllowed", "false"));
     return params;
   }
 
@@ -147,9 +147,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     HashMap<String, CommonPluginCommand<?>> pluginCommands = new HashMap<>();
     var xunitImportCommand = new XUnitImportCommand(requestEntityConverter,
         eventPublisher, launchRepository);
-    var fileFormatsCommand = new FileFormatsCommand();
     pluginCommands.put(xunitImportCommand.getName(), xunitImportCommand);
-    pluginCommands.put(fileFormatsCommand.getName(), fileFormatsCommand);
     return pluginCommands;
   }
 }

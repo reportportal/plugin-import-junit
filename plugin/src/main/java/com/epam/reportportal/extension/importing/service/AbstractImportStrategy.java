@@ -24,6 +24,7 @@ import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.dao.LaunchRepository;
+import com.epam.ta.reportportal.entity.enums.StatusEnum;
 import com.epam.ta.reportportal.entity.launch.Launch;
 import com.epam.ta.reportportal.ws.reporting.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.reporting.ItemAttributesRQ;
@@ -110,13 +111,13 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
    * a default date if the launch is broken, time should be updated to not to broke
    * the statistics
    */
-  protected void updateBrokenLaunch(String savedLaunchUuid, String projectName) {
-    if (savedLaunchUuid != null) {
-      final FinishExecutionRQ finishExecutionRQ = new FinishExecutionRQ();
-      finishExecutionRQ.setStatus("INTERRUPTED");
-      finishExecutionRQ.setEndTime(Instant.now());
-      eventPublisher.publishEvent(
-          new FinishLaunchRqEvent(this, projectName, savedLaunchUuid, finishExecutionRQ));
+  protected void updateBrokenLaunch(String savedLaunchId) {
+    if (savedLaunchId != null) {
+      Launch launch = launchRepository.findByUuid(savedLaunchId)
+          .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND));
+      launch.setStartTime(Instant.now());
+      launch.setStatus(StatusEnum.INTERRUPTED);
+      launchRepository.save(launch);
     }
   }
 
