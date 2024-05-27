@@ -1,6 +1,9 @@
 package com.epam.reportportal.extension.importing;
 
 import static com.epam.reportportal.extension.importing.command.XUnitImportCommand.MAX_FILE_SIZE;
+import static com.epam.reportportal.extension.util.CommonConstants.DESCRIPTION_KEY;
+import static com.epam.reportportal.extension.util.CommonConstants.IS_INTEGRATIONS_ALLOWED;
+import static com.epam.reportportal.extension.util.CommonConstants.METADATA;
 
 import com.epam.reportportal.extension.CommonPluginCommand;
 import com.epam.reportportal.extension.IntegrationGroupEnum;
@@ -42,6 +45,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   private static final String PLUGIN_ID = "JUnit";
   public static final String BINARY_DATA_PROPERTIES_FILE_ID = "binary-data.properties";
+  private static final String DESCRIPTION = "Reinforce you ReportPortal instance with JUnit import functionality and easily upload your log files right to ReportPortal.";
 
   private final Supplier<Map<String, PluginCommand>> pluginCommandMapping = new MemoizingSupplier<>(
       this::getCommands);
@@ -116,11 +120,12 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     Map<String, Object> params = new HashMap<>();
     params.put(ALLOWED_COMMANDS, new ArrayList<>(pluginCommandMapping.get().keySet()));
     params.put(COMMON_COMMANDS, new ArrayList<>(commonPluginCommandMapping.get().keySet()));
+    params.put(DESCRIPTION_KEY, DESCRIPTION);
+    params.put(METADATA, Map.of(IS_INTEGRATIONS_ALLOWED, Boolean.FALSE.toString()));
     params.put("maxFileSize", MAX_FILE_SIZE);
     params.put("acceptFileMimeTypes",
         List.of("application/zip", "application/x-zip-compressed", "application/zip-compressed",
             "application/xml", "text/xml"));
-    params.put("metadata", Map.of("isIntegrationAllowed", "false"));
     return params;
   }
 
