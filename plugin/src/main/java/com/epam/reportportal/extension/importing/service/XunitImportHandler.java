@@ -147,7 +147,7 @@ public class XunitImportHandler extends DefaultHandler {
   }
 
   private void verifyRootElement(String qName) {
-    if (rootVerified) {
+    if (!rootVerified) {
       if (!Objects.equals(TESTSUITES, fromString(qName))) {
         throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
             "Root node in junit xml file must be 'testsuites'");
