@@ -36,6 +36,7 @@ import com.epam.ta.reportportal.ws.reporting.Issue;
 import com.epam.ta.reportportal.ws.reporting.SaveLogRQ;
 import com.epam.ta.reportportal.ws.reporting.StartTestItemRQ;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -47,7 +48,6 @@ import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -150,7 +150,7 @@ public class XunitImportHandler extends DefaultHandler {
   private void verifyRootElement(String qName) {
     if (!rootVerified) {
       XunitReportTag rootTag = fromString(qName);
-      if (!Objects.equals(TESTSUITES, rootTag) && Objects.equals(TESTSUITE, rootTag)) {
+      if (!Lists.newArrayList(TESTSUITES, TESTSUITE).contains(rootTag)) {
         throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
             "Root node in junit xml file must be 'testsuites' or 'testsuite'");
       }
