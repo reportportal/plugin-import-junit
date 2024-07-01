@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package com.epam.ta.reportportal.core.imprt.impl.junit;
+package com.epam.reportportal.extension.importing.service;
 
+import static com.epam.reportportal.extension.importing.service.XunitReportTag.TESTSUITES;
+import static com.epam.reportportal.extension.importing.service.XunitReportTag.fromString;
 import static com.epam.reportportal.extension.importing.utils.DateUtils.toMillis;
 import static com.epam.ta.reportportal.entity.enums.TestItemIssueGroup.NOT_ISSUE_FLAG;
 
@@ -23,7 +25,8 @@ import com.epam.reportportal.events.FinishItemRqEvent;
 import com.epam.reportportal.events.SaveLogRqEvent;
 import com.epam.reportportal.events.StartChildItemRqEvent;
 import com.epam.reportportal.events.StartRootItemRqEvent;
-import com.epam.reportportal.extension.importing.service.XunitReportTag;
+import com.epam.reportportal.rules.exception.ErrorType;
+import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.entity.enums.LogLevel;
 import com.epam.ta.reportportal.entity.enums.StatusEnum;
 import com.epam.ta.reportportal.entity.enums.TestItemTypeEnum;
@@ -43,6 +46,7 @@ import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -86,6 +90,7 @@ public class XunitImportHandler extends DefaultHandler {
   private StatusEnum status;
   private StringBuilder message;
   private Instant startItemTime;
+  private boolean rootVerified;
 
   @Override
   public void startDocument() {
@@ -100,6 +105,7 @@ public class XunitImportHandler extends DefaultHandler {
 
   @Override
   public void startElement(String uri, String localName, String qName, Attributes attributes) {
+    verifyRootElement(qName);
     switch (XunitReportTag.fromString(qName)) {
       case TESTSUITE:
         if (itemUuids.isEmpty()) {
@@ -137,6 +143,16 @@ public class XunitImportHandler extends DefaultHandler {
       default:
         LOGGER.warn("Unknown tag: {}", qName);
         break;
+    }
+  }
+
+  private void verifyRootElement(String qName) {
+    if (rootVerified) {
+      if (!Objects.equals(TESTSUITES, fromString(qName))) {
+        throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
+            "Root node in junit xml file must be 'testsuites'");
+      }
+      rootVerified = true;
     }
   }
 
