@@ -16,6 +16,7 @@
 
 package com.epam.reportportal.extension.importing.service;
 
+import static com.epam.reportportal.extension.importing.service.XunitReportTag.TESTSUITE;
 import static com.epam.reportportal.extension.importing.service.XunitReportTag.TESTSUITES;
 import static com.epam.reportportal.extension.importing.service.XunitReportTag.fromString;
 import static com.epam.reportportal.extension.importing.utils.DateUtils.toMillis;
@@ -148,9 +149,10 @@ public class XunitImportHandler extends DefaultHandler {
 
   private void verifyRootElement(String qName) {
     if (!rootVerified) {
-      if (!Objects.equals(TESTSUITES, fromString(qName))) {
+      XunitReportTag rootTag = fromString(qName);
+      if (!Objects.equals(TESTSUITES, rootTag) && Objects.equals(TESTSUITE, rootTag)) {
         throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
-            "Root node in junit xml file must be 'testsuites'");
+            "Root node in junit xml file must be 'testsuites' or 'testsuite'");
       }
       rootVerified = true;
     }
