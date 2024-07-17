@@ -33,6 +33,7 @@ import com.epam.ta.reportportal.entity.enums.StatusEnum;
 import com.epam.ta.reportportal.entity.enums.TestItemTypeEnum;
 import com.epam.ta.reportportal.ws.reporting.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.reporting.Issue;
+import com.epam.ta.reportportal.ws.reporting.ItemAttributesRQ;
 import com.epam.ta.reportportal.ws.reporting.SaveLogRQ;
 import com.epam.ta.reportportal.ws.reporting.StartTestItemRQ;
 import com.google.common.base.Strings;
@@ -48,7 +49,9 @@ import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -88,6 +91,7 @@ public class XunitImportHandler extends DefaultHandler {
 
   //items structure ids
   private Deque<String> itemUuids;
+  private Set<ItemAttributesRQ> itemAttributes;
   private StatusEnum status;
   private StringBuilder message;
   private Instant startItemTime;
@@ -140,21 +144,15 @@ public class XunitImportHandler extends DefaultHandler {
       case WARNING:
         message = new StringBuilder();
         break;
+      case PROPERTIES:
+        itemAttributes = new HashSet<>();
+        break;
+      case PROPERTY:
+        handleProperty(attributes);
       case UNKNOWN:
       default:
         LOGGER.warn("Unknown tag: {}", qName);
         break;
-    }
-  }
-
-  private void verifyRootElement(String qName) {
-    if (!rootVerified) {
-      XunitReportTag rootTag = fromString(qName);
-      if (!Lists.newArrayList(TESTSUITES, TESTSUITE).contains(rootTag)) {
-        throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
-            "Root node in junit xml file must be 'testsuites' or 'testsuite'");
-      }
-      rootVerified = true;
     }
   }
 
@@ -221,6 +219,29 @@ public class XunitImportHandler extends DefaultHandler {
     }
   }
 
+
+  private void handleProperty(Attributes attributes) {
+    if ("attribute".equalsIgnoreCase(attributes.getValue("name"))) {
+      var value = attributes.getValue("value").split(":");
+      if (value.length > 1) {
+        itemAttributes.add(new ItemAttributesRQ(value[0], value[1]));
+      } else {
+        itemAttributes.add(new ItemAttributesRQ(value[0]));
+      }
+    }
+  }
+
+  private void verifyRootElement(String qName) {
+    if (!rootVerified) {
+      XunitReportTag rootTag = fromString(qName);
+      if (!Lists.newArrayList(TESTSUITES, TESTSUITE).contains(rootTag)) {
+        throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
+            "Root node in junit xml file must be 'testsuites' or 'testsuite'");
+      }
+      rootVerified = true;
+    }
+  }
+
   private Instant parseTimeStamp(String timestamp) {
     // try to parse datetime as Long, otherwise parse as timestamp
     try {
@@ -280,9 +301,11 @@ public class XunitImportHandler extends DefaultHandler {
     FinishTestItemRQ rq = new FinishTestItemRQ();
     markAsNotIssue(rq);
     rq.setEndTime(startSuiteTime.plus(currentSuiteDuration, ChronoUnit.MILLIS));
+    rq.setAttributes(itemAttributes);
     eventPublisher.publishEvent(
         new FinishItemRqEvent(this, projectName, itemUuids.poll(), rq));
     status = null;
+    itemAttributes = new HashSet<>();
   }
 
   private void finishTestItem() {
@@ -292,10 +315,12 @@ public class XunitImportHandler extends DefaultHandler {
     commonDuration += currentDuration;
     rq.setEndTime(endTime);
     rq.setStatus(Optional.ofNullable(status).orElse(StatusEnum.PASSED).name());
+    rq.setAttributes(itemAttributes);
     currentItemUuid = itemUuids.poll();
     eventPublisher.publishEvent(
         new FinishItemRqEvent(this, projectName, currentItemUuid, rq));
     status = null;
+    itemAttributes = new HashSet<>();
   }
 
   private void markAsNotIssue(FinishTestItemRQ rq) {
