@@ -26,6 +26,7 @@ import com.epam.reportportal.events.FinishItemRqEvent;
 import com.epam.reportportal.events.SaveLogRqEvent;
 import com.epam.reportportal.events.StartChildItemRqEvent;
 import com.epam.reportportal.events.StartRootItemRqEvent;
+import com.epam.reportportal.extension.importing.model.ItemInfo;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.entity.enums.LogLevel;
@@ -48,10 +49,10 @@ import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -90,8 +91,7 @@ public class XunitImportHandler extends DefaultHandler {
   private long currentSuiteDuration;
 
   //items structure ids
-  private Deque<String> itemUuids;
-  private Set<ItemAttributesRQ> itemAttributes;
+  private Deque<ItemInfo> itemInfos;
   private StatusEnum status;
   private StringBuilder message;
   private Instant startItemTime;
@@ -99,7 +99,7 @@ public class XunitImportHandler extends DefaultHandler {
 
   @Override
   public void startDocument() {
-    itemUuids = new ArrayDeque<>();
+    itemInfos = new ArrayDeque<>();
     message = new StringBuilder();
     startSuiteTime = Instant.now();
   }
@@ -113,7 +113,7 @@ public class XunitImportHandler extends DefaultHandler {
     verifyRootElement(qName);
     switch (XunitReportTag.fromString(qName)) {
       case TESTSUITE:
-        if (itemUuids.isEmpty()) {
+        if (itemInfos.isEmpty()) {
           startRootItem(attributes.getValue(XunitReportTag.ATTR_NAME.getValue()),
               attributes.getValue(XunitReportTag.START_TIME.getValue()),
               attributes.getValue(XunitReportTag.TIMESTAMP.getValue()),
@@ -145,7 +145,9 @@ public class XunitImportHandler extends DefaultHandler {
         message = new StringBuilder();
         break;
       case PROPERTIES:
-        itemAttributes = new HashSet<>();
+        if (itemInfos.peek() != null) {
+          itemInfos.peek().setItemAttributes(new HashSet<>());
+        }
         break;
       case PROPERTY:
         handleProperty(attributes);
@@ -177,6 +179,8 @@ public class XunitImportHandler extends DefaultHandler {
       case WARNING:
         attachLog(LogLevel.WARN);
         break;
+      case PROPERTIES:
+        pushDescription();
       case UNKNOWN:
       default:
         LOGGER.warn("Unknown tag: {}", qName);
@@ -212,7 +216,10 @@ public class XunitImportHandler extends DefaultHandler {
 
     eventPublisher.publishEvent(
         new StartRootItemRqEvent(this, projectName, rq));
-    itemUuids.push(rq.getUuid());
+
+    var itemInfo = new ItemInfo();
+    itemInfo.setUuid(rq.getUuid());
+    itemInfos.push(itemInfo);
 
     if (initialTime.isAfter(startItemTime)) {
       initialTime = startItemTime;
@@ -221,12 +228,17 @@ public class XunitImportHandler extends DefaultHandler {
 
 
   private void handleProperty(Attributes attributes) {
+    var itemInfo = itemInfos.peek();
+    if (itemInfo == null) {
+      return;
+    }
     if ("attribute".equalsIgnoreCase(attributes.getValue("name"))) {
-      var value = attributes.getValue("value").split(":");
+      var value = Arrays.stream(attributes.getValue("value").split(":"))
+          .filter(it -> !StringUtils.isEmpty(it)).toArray(String[]::new);
       if (value.length > 1) {
-        itemAttributes.add(new ItemAttributesRQ(value[0], value[1]));
+        itemInfo.getItemAttributes().add(new ItemAttributesRQ(value[0], value[1]));
       } else {
-        itemAttributes.add(new ItemAttributesRQ(value[0]));
+        itemInfo.getItemAttributes().add(new ItemAttributesRQ(value[0]));
       }
     }
   }
@@ -267,8 +279,13 @@ public class XunitImportHandler extends DefaultHandler {
 
   private void startTestItem(String name) {
     StartTestItemRQ rq = buildStartTestRq(name);
-    eventPublisher.publishEvent(new StartChildItemRqEvent(this, projectName, itemUuids.peek(), rq));
-    itemUuids.push(rq.getUuid());
+    if (itemInfos.peek() != null) {
+      eventPublisher.publishEvent(
+          new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+    }
+    var itemInfo = new ItemInfo();
+    itemInfo.setUuid(rq.getUuid());
+    itemInfos.push(itemInfo);
   }
 
   private void startStepItem(String name, String startTime, String timestamp, String duration) {
@@ -288,39 +305,51 @@ public class XunitImportHandler extends DefaultHandler {
 
     rq.setStartTime(startItemTime);
 
-    eventPublisher.publishEvent(
-        new StartChildItemRqEvent(this, projectName, itemUuids.peek(), rq));
+    if (itemInfos.peek() != null) {
+      eventPublisher.publishEvent(
+          new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+    }
 
     String id = rq.getUuid();
     currentDuration = toMillis(duration);
     currentItemUuid = id;
-    itemUuids.push(id);
+    var itemInfo = new ItemInfo();
+    itemInfo.setUuid(id);
+    itemInfos.push(itemInfo);
   }
 
   private void finishRootItem() {
+    var itemInfo = itemInfos.poll();
+    if (itemInfo == null) {
+      return;
+    }
     FinishTestItemRQ rq = new FinishTestItemRQ();
     markAsNotIssue(rq);
     rq.setEndTime(startSuiteTime.plus(currentSuiteDuration, ChronoUnit.MILLIS));
-    rq.setAttributes(itemAttributes);
+    rq.setAttributes(itemInfo.getItemAttributes());
+    rq.setDescription(itemInfo.getDescription());
     eventPublisher.publishEvent(
-        new FinishItemRqEvent(this, projectName, itemUuids.poll(), rq));
+        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
     status = null;
-    itemAttributes = new HashSet<>();
   }
 
   private void finishTestItem() {
+    var itemInfo = itemInfos.poll();
+    if (itemInfo == null) {
+      return;
+    }
     FinishTestItemRQ rq = new FinishTestItemRQ();
     markAsNotIssue(rq);
     Instant endTime = startItemTime.plus(currentDuration, ChronoUnit.MILLIS);
     commonDuration += currentDuration;
     rq.setEndTime(endTime);
     rq.setStatus(Optional.ofNullable(status).orElse(StatusEnum.PASSED).name());
-    rq.setAttributes(itemAttributes);
-    currentItemUuid = itemUuids.poll();
+    rq.setAttributes(itemInfo.getItemAttributes());
+    rq.setDescription(itemInfo.getDescription());
+    currentItemUuid = itemInfo.getUuid();
     eventPublisher.publishEvent(
         new FinishItemRqEvent(this, projectName, currentItemUuid, rq));
     status = null;
-    itemAttributes = new HashSet<>();
   }
 
   private void markAsNotIssue(FinishTestItemRQ rq) {
@@ -340,6 +369,7 @@ public class XunitImportHandler extends DefaultHandler {
       saveLogRQ.setItemUuid(currentItemUuid);
       eventPublisher.publishEvent(
           new SaveLogRqEvent(this, projectName, saveLogRQ, null));
+      message = new StringBuilder();
     }
   }
 
@@ -351,6 +381,13 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setType(TestItemTypeEnum.TEST.name());
     rq.setName(Strings.isNullOrEmpty(name) ? "no_name" : name);
     return rq;
+  }
+
+  private void pushDescription() {
+    if (!StringUtils.isEmpty(message) && itemInfos.peek() != null) {
+      itemInfos.peek().setDescription(message.toString());
+      message = new StringBuilder();
+    }
   }
 
   public void withParameters(String launchId, String projectName, boolean isSkippedNotIssue) {
