@@ -43,7 +43,7 @@ import org.springframework.context.support.AbstractApplicationContext;
 @Extension
 public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, DisposableBean {
 
-  private static final String PLUGIN_ID = "JUnit";
+  private static final String PLUGIN_ID = "junit";
   public static final String BINARY_DATA_PROPERTIES_FILE_ID = "binary-data.properties";
   private static final String DESCRIPTION = "Reinforce you ReportPortal instance with JUnit import functionality and easily upload your log files right to ReportPortal.";
 
