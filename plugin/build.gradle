@@ -87,6 +87,8 @@ artifacts {
     archives shadowJar
 }
 
+generatePomFileForShadowPublication { pom.packaging = "jar" }
+
 sourceSets {
     main {
         resources
