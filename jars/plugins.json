@@ -1,6 +1,6 @@
 [
   {
-    "id": "JUnit",
+    "id": "junit",
     "description": "Reinforce you ReportPortal instance with JUnit import functionality and easily upload your log files right to ReportPortal.",
     "releases": [
       {
