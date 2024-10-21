@@ -49,7 +49,7 @@ dependencies {
         annotationProcessor 'com.epam.reportportal:plugin-api'
     } else {
         implementation 'com.github.reportportal:commons-dao:develop-SNAPSHOT'
-        implementation 'com.github.reportportal:commons:0c66a35'
+        implementation 'com.github.reportportal:commons:develop-SNAPSHOT'
         implementation 'com.github.reportportal:plugin-api:develop-SNAPSHOT'
         annotationProcessor 'com.github.reportportal:plugin-api:develop-SNAPSHOT'
     }
