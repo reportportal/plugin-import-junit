@@ -328,6 +328,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setEndTime(startSuiteTime.plus(currentSuiteDuration, ChronoUnit.MILLIS));
     rq.setAttributes(itemInfo.getItemAttributes());
     rq.setDescription(itemInfo.getDescription());
+    rq.setLaunchUuid(launchUuid);
     eventPublisher.publishEvent(
         new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
     status = null;
@@ -346,6 +347,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setStatus(Optional.ofNullable(status).orElse(StatusEnum.PASSED).name());
     rq.setAttributes(itemInfo.getItemAttributes());
     rq.setDescription(itemInfo.getDescription());
+    rq.setLaunchUuid(launchUuid);
     currentItemUuid = itemInfo.getUuid();
     eventPublisher.publishEvent(
         new FinishItemRqEvent(this, projectName, currentItemUuid, rq));
@@ -367,6 +369,7 @@ public class XunitImportHandler extends DefaultHandler {
       saveLogRQ.setLogTime(startItemTime);
       saveLogRQ.setMessage(message.toString().trim());
       saveLogRQ.setItemUuid(currentItemUuid);
+      saveLogRQ.setLaunchUuid(launchUuid);
       eventPublisher.publishEvent(
           new SaveLogRqEvent(this, projectName, saveLogRQ, null));
       message = new StringBuilder();
@@ -375,8 +378,8 @@ public class XunitImportHandler extends DefaultHandler {
 
   private StartTestItemRQ buildStartTestRq(String name) {
     StartTestItemRQ rq = new StartTestItemRQ();
-    rq.setUuid(UUID.randomUUID().toString());
     rq.setLaunchUuid(launchUuid);
+    rq.setUuid(UUID.randomUUID().toString());
     rq.setStartTime(startItemTime);
     rq.setType(TestItemTypeEnum.TEST.name());
     rq.setName(Strings.isNullOrEmpty(name) ? "no_name" : name);
