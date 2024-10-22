@@ -22,16 +22,13 @@ import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.dao.LaunchRepository;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import org.apache.commons.io.FilenameUtils;
+import java.util.zip.ZipInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -43,6 +40,7 @@ public class ZipImportStrategy extends AbstractImportStrategy {
   private static final Predicate<ZipEntry> isFile = zipEntry -> !zipEntry.isDirectory();
   private static final Predicate<ZipEntry> isXml =
       zipEntry -> zipEntry.getName().endsWith(XML_EXTENSION);
+  private static final Logger log = LoggerFactory.getLogger(ZipImportStrategy.class);
 
   private final XunitParseService xunitParseService;
 
@@ -56,50 +54,27 @@ public class ZipImportStrategy extends AbstractImportStrategy {
   public String importLaunch(MultipartFile file, String projectName, LaunchImportRQ rq) {
     //copy of the launch's id to use it in catch block if something goes wrong
     String savedLaunchUuid = null;
-    File zip = transferToTempFile(file);
-
-    try (ZipFile zipFile = new ZipFile(zip)) {
+    try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream())) {
       String launchUuid = startLaunch(getLaunchName(file, ZIP_EXTENSION), projectName, rq);
       savedLaunchUuid = launchUuid;
-      List<ParseResults> parseResults = zipFile.stream().filter(isFile.and(isXml))
-          .map(zipEntry ->
-              xunitParseService.call(getEntryStream(zipFile, zipEntry), launchUuid,
-                  projectName,
-                  isSkippedNotIssue(rq.getAttributes()))).collect(Collectors.toList());
+      List<ParseResults> parseResults = new ArrayList<>();
+      ZipEntry zipEntry;
+      while ((zipEntry = zipInputStream.getNextEntry()) != null
+          && isFile.test(zipEntry)
+          && isXml.test(zipEntry)) {
+        parseResults.add(xunitParseService.call(zipInputStream, launchUuid, projectName,
+            isSkippedNotIssue(rq.getAttributes())));
+      }
+
       ParseResults results = processResults(parseResults);
       finishLaunch(launchUuid, projectName, results);
       updateStartTime(launchUuid, results.getStartTime());
       return launchUuid;
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Error during launch import", e);
       updateBrokenLaunch(savedLaunchUuid);
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, cleanMessage(e));
-    } finally {
-      try {
-        Files.deleteIfExists(zip.getAbsoluteFile().toPath());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
     }
   }
 
-  private InputStream getEntryStream(ZipFile file, ZipEntry zipEntry) {
-    try {
-      return file.getInputStream(zipEntry);
-    } catch (IOException e) {
-      throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, e.getMessage());
-    }
-  }
-
-  private File transferToTempFile(MultipartFile file) {
-    try {
-      File tmp = File.createTempFile(file.getOriginalFilename(),
-          "." + FilenameUtils.getExtension(file.getOriginalFilename())
-      );
-      file.transferTo(tmp);
-      return tmp;
-    } catch (IOException e) {
-      throw new ReportPortalException("Error during transferring multipart file.", e);
-    }
-  }
 }
