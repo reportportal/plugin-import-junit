@@ -153,7 +153,7 @@ public class XunitImportHandler extends DefaultHandler {
         handleProperty(attributes);
       case UNKNOWN:
       default:
-        LOGGER.warn("Unknown tag: {}", qName);
+        LOGGER.debug("Unknown tag: {}", qName);
         break;
     }
   }
@@ -183,7 +183,7 @@ public class XunitImportHandler extends DefaultHandler {
         pushDescription();
       case UNKNOWN:
       default:
-        LOGGER.warn("Unknown tag: {}", qName);
+        LOGGER.debug("Unknown tag: {}", qName);
         break;
     }
   }
@@ -299,8 +299,6 @@ public class XunitImportHandler extends DefaultHandler {
       startItemTime = parseTimeStamp(timestamp);
     } else if (null != startTime) {
       startItemTime = parseTimeStamp(startTime);
-    } else {
-      startItemTime = startSuiteTime;
     }
 
     rq.setStartTime(startItemTime);
@@ -341,8 +339,9 @@ public class XunitImportHandler extends DefaultHandler {
     }
     FinishTestItemRQ rq = new FinishTestItemRQ();
     markAsNotIssue(rq);
-    Instant endTime = startItemTime.plus(currentDuration, ChronoUnit.MILLIS);
+    startItemTime = startItemTime.plus(currentDuration, ChronoUnit.MILLIS);
     commonDuration += currentDuration;
+    Instant endTime = startItemTime;
     rq.setEndTime(endTime);
     rq.setStatus(Optional.ofNullable(status).orElse(StatusEnum.PASSED).name());
     rq.setAttributes(itemInfo.getItemAttributes());
