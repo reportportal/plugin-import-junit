@@ -22,11 +22,14 @@ import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.dao.LaunchRepository;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -54,16 +57,24 @@ public class ZipImportStrategy extends AbstractImportStrategy {
   public String importLaunch(MultipartFile file, String projectName, LaunchImportRQ rq) {
     //copy of the launch's id to use it in catch block if something goes wrong
     String savedLaunchUuid = null;
-    try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream())) {
+    try (ZipArchiveInputStream zipInputStream = new ZipArchiveInputStream(file.getInputStream(),
+        StandardCharsets.UTF_8.toString(), true, true)) {
       String launchUuid = startLaunch(getLaunchName(file, ZIP_EXTENSION), projectName, rq);
       savedLaunchUuid = launchUuid;
       List<ParseResults> parseResults = new ArrayList<>();
       ZipEntry zipEntry;
-      while ((zipEntry = zipInputStream.getNextEntry()) != null
-          && isFile.test(zipEntry)
-          && isXml.test(zipEntry)) {
-        parseResults.add(xunitParseService.call(zipInputStream, launchUuid, projectName,
-            isSkippedNotIssue(rq.getAttributes())));
+
+      while ((zipEntry = zipInputStream.getNextEntry()) != null) {
+        if (isFile.test(zipEntry) && isXml.test(zipEntry)) {
+
+          ByteArrayInputStream bais = getZipEntryInputStream(zipInputStream, zipEntry.getSize());
+
+          parseResults.add(xunitParseService.call(
+              bais,
+              launchUuid,
+              projectName,
+              isSkippedNotIssue(rq.getAttributes())));
+        }
       }
 
       ParseResults results = processResults(parseResults);
@@ -75,6 +86,14 @@ public class ZipImportStrategy extends AbstractImportStrategy {
       updateBrokenLaunch(savedLaunchUuid);
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, cleanMessage(e));
     }
+  }
+
+  private ByteArrayInputStream getZipEntryInputStream(ZipArchiveInputStream zipInputStream,
+      long zipEntrySize) throws IOException {
+    byte[] bytes = new byte[(int) zipEntrySize];
+
+    zipInputStream.readNBytes(bytes, 0, (int) zipEntrySize);
+    return new ByteArrayInputStream(bytes);
   }
 
 }
