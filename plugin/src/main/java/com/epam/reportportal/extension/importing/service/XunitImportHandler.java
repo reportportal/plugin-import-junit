@@ -16,11 +16,16 @@
 
 package com.epam.reportportal.extension.importing.service;
 
+import static com.epam.reportportal.extension.importing.service.XunitReportTag.ATTR_NAME;
+import static com.epam.reportportal.extension.importing.service.XunitReportTag.ATTR_TIME;
+import static com.epam.reportportal.extension.importing.service.XunitReportTag.START_TIME;
 import static com.epam.reportportal.extension.importing.service.XunitReportTag.TESTSUITE;
 import static com.epam.reportportal.extension.importing.service.XunitReportTag.TESTSUITES;
+import static com.epam.reportportal.extension.importing.service.XunitReportTag.TIMESTAMP;
 import static com.epam.reportportal.extension.importing.service.XunitReportTag.fromString;
 import static com.epam.reportportal.extension.importing.utils.DateUtils.toMillis;
 import static com.epam.ta.reportportal.entity.enums.TestItemIssueGroup.NOT_ISSUE_FLAG;
+import static java.util.Optional.ofNullable;
 
 import com.epam.reportportal.events.FinishItemRqEvent;
 import com.epam.reportportal.events.SaveLogRqEvent;
@@ -52,7 +57,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -64,44 +68,28 @@ import org.xml.sax.helpers.DefaultHandler;
 public class XunitImportHandler extends DefaultHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(XunitImportHandler.class);
-
-  private final ApplicationEventPublisher eventPublisher;
-
   private static final int MAX_ENTITY_NAME_LENGTH = 256;
+  private final ApplicationEventPublisher eventPublisher;
+  private String projectName;
+  private String launchUuid;
+  private boolean isSkippedNotIssue = false;
+  private long commonDuration;
+  private Deque<ItemInfo> itemInfos;
+  private StatusEnum status;
+  private StringBuilder message;
+  private boolean rootVerified;
+  private Instant lowestTime = Instant.now();
+
+  private Instant currentTime;
 
   public XunitImportHandler(ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }
 
-  private Instant initialTime = Instant.now();
-
-  //initial info
-  private String projectName;
-  private String launchUuid;
-  private boolean isSkippedNotIssue = false;
-
-  //need to know item's id to attach System.out/System.err logs
-  private String currentItemUuid;
-
-  private Instant startSuiteTime;
-
-  private long commonDuration;
-  private long currentDuration;
-
-  private long currentSuiteDuration;
-
-  //items structure ids
-  private Deque<ItemInfo> itemInfos;
-  private StatusEnum status;
-  private StringBuilder message;
-  private Instant startItemTime;
-  private boolean rootVerified;
-
   @Override
   public void startDocument() {
     itemInfos = new ArrayDeque<>();
     message = new StringBuilder();
-    startSuiteTime = Instant.now();
   }
 
   @Override
@@ -114,21 +102,13 @@ public class XunitImportHandler extends DefaultHandler {
     switch (XunitReportTag.fromString(qName)) {
       case TESTSUITE:
         if (itemInfos.isEmpty()) {
-          startRootItem(attributes.getValue(XunitReportTag.ATTR_NAME.getValue()),
-              attributes.getValue(XunitReportTag.START_TIME.getValue()),
-              attributes.getValue(XunitReportTag.TIMESTAMP.getValue()),
-              attributes.getValue(XunitReportTag.ATTR_TIME.getValue())
-          );
+          startRootItem(attributes);
         } else {
-          startTestItem(attributes.getValue(XunitReportTag.ATTR_NAME.getValue()));
+          startTestItem(attributes);
         }
         break;
       case TESTCASE:
-        startStepItem(attributes.getValue(XunitReportTag.ATTR_NAME.getValue()),
-            attributes.getValue(XunitReportTag.START_TIME.getValue()),
-            attributes.getValue(XunitReportTag.TIMESTAMP.getValue()),
-            attributes.getValue(XunitReportTag.ATTR_TIME.getValue())
-        );
+        startStepItem(attributes);
         break;
       case ERROR:
       case FAILURE:
@@ -196,36 +176,145 @@ public class XunitImportHandler extends DefaultHandler {
     }
   }
 
-  private void startRootItem(String name, String startTime, String timestamp, String duration) {
-    if (null != timestamp) {
-      startItemTime = parseTimeStamp(timestamp);
-      if (startSuiteTime.isAfter(startItemTime)) {
-        startSuiteTime = startItemTime;
+  private void verifyRootElement(String qName) {
+    if (!rootVerified) {
+      XunitReportTag rootTag = fromString(qName);
+      if (!Lists.newArrayList(TESTSUITES, TESTSUITE).contains(rootTag)) {
+        throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
+            "Root node in junit xml file must be 'testsuites' or 'testsuite'");
       }
-    } else if (null != startTime) {
-      startItemTime = parseTimeStamp(startTime);
-      if (startSuiteTime.isAfter(startItemTime)) {
-        startSuiteTime = startItemTime;
-      }
-    } else {
-      startItemTime = Instant.now();
-      startSuiteTime = Instant.now();
-    }
-    currentSuiteDuration = toMillis(duration);
-    StartTestItemRQ rq = buildStartTestRq(name);
-
-    eventPublisher.publishEvent(
-        new StartRootItemRqEvent(this, projectName, rq));
-
-    var itemInfo = new ItemInfo();
-    itemInfo.setUuid(rq.getUuid());
-    itemInfos.push(itemInfo);
-
-    if (initialTime.isAfter(startItemTime)) {
-      initialTime = startItemTime;
+      rootVerified = true;
     }
   }
 
+  private void startRootItem(Attributes attributes) {
+    Instant time = ofNullable(resolveStartTime(attributes)).orElse(Instant.now());
+    currentTime = time;
+    var rq = buildStartTestRq(attributes.getValue(ATTR_NAME.getValue()), time);
+    eventPublisher.publishEvent(new StartRootItemRqEvent(this, projectName, rq));
+
+    var itemInfo = new ItemInfo();
+    itemInfo.setUuid(rq.getUuid());
+    itemInfo.setStartTime(time);
+    itemInfo.setDuration(toMillis(attributes.getValue(ATTR_TIME.getValue())));
+    itemInfos.push(itemInfo);
+
+    if (time.isBefore(lowestTime)) {
+      lowestTime = time;
+    }
+  }
+
+  private void startTestItem(Attributes attributes) {
+    Instant time = ofNullable(resolveStartTime(attributes)).orElse(itemInfos.peek().getStartTime());
+    currentTime = time;
+    StartTestItemRQ rq = buildStartTestRq(
+        StringUtils.abbreviate(attributes.getValue(ATTR_NAME.getValue()), MAX_ENTITY_NAME_LENGTH),
+        time);
+    if (itemInfos.peek() != null) {
+      eventPublisher.publishEvent(
+          new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+    }
+    var itemInfo = new ItemInfo();
+    itemInfo.setUuid(rq.getUuid());
+    itemInfos.push(itemInfo);
+  }
+
+  private void startStepItem(Attributes attributes) {
+    var time = ofNullable(resolveStartTime(attributes)).orElse(currentTime);
+    var rq = new StartTestItemRQ();
+    rq.setUuid(UUID.randomUUID().toString());
+    rq.setLaunchUuid(launchUuid);
+    rq.setType(TestItemTypeEnum.STEP.name());
+    rq.setName(
+        StringUtils.abbreviate(attributes.getValue(ATTR_NAME.getValue()), MAX_ENTITY_NAME_LENGTH));
+    rq.setStartTime(time);
+
+    eventPublisher.publishEvent(
+        new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+
+    var itemInfo = new ItemInfo();
+    itemInfo.setUuid(rq.getUuid());
+    itemInfo.setStartTime(time);
+    itemInfo.setDuration(toMillis(attributes.getValue(ATTR_TIME.getValue())));
+    itemInfos.push(itemInfo);
+  }
+
+  private Instant resolveStartTime(Attributes attributes) {
+    Instant time = null;
+    if (StringUtils.isNotEmpty(attributes.getValue(START_TIME.getValue()))) {
+      time = parseTimeStamp(attributes.getValue(START_TIME.getValue()));
+    } else if (StringUtils.isNotEmpty(attributes.getValue(TIMESTAMP.getValue()))) {
+      time = parseTimeStamp(attributes.getValue(TIMESTAMP.getValue()));
+    }
+    return time;
+  }
+
+  private void finishRootItem() {
+    var itemInfo = itemInfos.poll();
+    if (itemInfo == null) {
+      return;
+    }
+    var rq = new FinishTestItemRQ();
+    markAsNotIssue(rq);
+    rq.setLaunchUuid(launchUuid);
+    rq.setEndTime(itemInfo.getStartTime().plus(itemInfo.getDuration(), ChronoUnit.MILLIS));
+    rq.setAttributes(itemInfo.getItemAttributes());
+    rq.setDescription(itemInfo.getDescription());
+
+    eventPublisher.publishEvent(
+        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
+
+    status = null;
+    currentTime = null;
+  }
+
+  private void finishTestItem() {
+    var itemInfo = itemInfos.poll();
+    if (itemInfo == null) {
+      return;
+    }
+
+    Instant endTime = itemInfo.getStartTime().plus(itemInfo.getDuration(), ChronoUnit.MILLIS);
+    commonDuration += itemInfo.getDuration();
+
+    var rq = new FinishTestItemRQ();
+    markAsNotIssue(rq);
+    rq.setLaunchUuid(launchUuid);
+    rq.setEndTime(endTime);
+    rq.setStatus(ofNullable(status).orElse(StatusEnum.PASSED).name());
+    rq.setAttributes(itemInfo.getItemAttributes());
+    rq.setDescription(itemInfo.getDescription());
+
+    eventPublisher.publishEvent(
+        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
+
+    status = null;
+    currentTime = endTime;
+  }
+
+  private void attachLog(LogLevel logLevel) {
+    if (null != message && message.length() != 0) {
+      var saveLogRQ = new SaveLogRQ();
+      saveLogRQ.setLaunchUuid(launchUuid);
+      saveLogRQ.setLevel(logLevel.name());
+      saveLogRQ.setLogTime(itemInfos.peek().getStartTime());
+      saveLogRQ.setMessage(message.toString().trim());
+      saveLogRQ.setItemUuid(itemInfos.peek().getUuid());
+      eventPublisher.publishEvent(
+          new SaveLogRqEvent(this, projectName, saveLogRQ, null));
+      message = new StringBuilder();
+    }
+  }
+
+  private StartTestItemRQ buildStartTestRq(String name, Instant startTime) {
+    var rq = new StartTestItemRQ();
+    rq.setUuid(UUID.randomUUID().toString());
+    rq.setLaunchUuid(launchUuid);
+    rq.setStartTime(startTime);
+    rq.setType(TestItemTypeEnum.SUITE.name());
+    rq.setName(Strings.isNullOrEmpty(name) ? "no_name" : name);
+    return rq;
+  }
 
   private void handleProperty(Attributes attributes) {
     var itemInfo = itemInfos.peek();
@@ -243,15 +332,33 @@ public class XunitImportHandler extends DefaultHandler {
     }
   }
 
-  private void verifyRootElement(String qName) {
-    if (!rootVerified) {
-      XunitReportTag rootTag = fromString(qName);
-      if (!Lists.newArrayList(TESTSUITES, TESTSUITE).contains(rootTag)) {
-        throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
-            "Root node in junit xml file must be 'testsuites' or 'testsuite'");
-      }
-      rootVerified = true;
+  private void markAsNotIssue(FinishTestItemRQ rq) {
+    if (StatusEnum.SKIPPED.equals(status) && isSkippedNotIssue) {
+      var issue = new Issue();
+      issue.setIssueType(NOT_ISSUE_FLAG.getValue());
+      rq.setIssue(issue);
     }
+  }
+
+  private void pushDescription() {
+    if (!StringUtils.isEmpty(message) && itemInfos.peek() != null) {
+      itemInfos.peek().setDescription(message.toString());
+      message = new StringBuilder();
+    }
+  }
+
+  public void withParameters(String launchId, String projectName, boolean isSkippedNotIssue) {
+    this.projectName = projectName;
+    this.launchUuid = launchId;
+    this.isSkippedNotIssue = isSkippedNotIssue;
+  }
+
+  public Instant getLowestTime() {
+    return lowestTime;
+  }
+
+  public long getCommonDuration() {
+    return commonDuration;
   }
 
   private Instant parseTimeStamp(String timestamp) {
@@ -275,137 +382,6 @@ public class XunitImportHandler extends DefaultHandler {
       }
     }
 
-  }
-
-  private void startTestItem(String name) {
-    StartTestItemRQ rq = buildStartTestRq(name);
-    if (itemInfos.peek() != null) {
-      eventPublisher.publishEvent(
-          new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
-    }
-    var itemInfo = new ItemInfo();
-    itemInfo.setUuid(rq.getUuid());
-    itemInfos.push(itemInfo);
-  }
-
-  private void startStepItem(String name, String startTime, String timestamp, String duration) {
-    StartTestItemRQ rq = new StartTestItemRQ();
-    rq.setLaunchUuid(launchUuid);
-    rq.setType(TestItemTypeEnum.STEP.name());
-    rq.setName(StringUtils.abbreviate(name, MAX_ENTITY_NAME_LENGTH));
-    rq.setUuid(UUID.randomUUID().toString());
-
-    if (null != timestamp) {
-      startItemTime = parseTimeStamp(timestamp);
-    } else if (null != startTime) {
-      startItemTime = parseTimeStamp(startTime);
-    } else {
-      startItemTime = startSuiteTime;
-    }
-
-    rq.setStartTime(startItemTime);
-
-    if (itemInfos.peek() != null) {
-      eventPublisher.publishEvent(
-          new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
-    }
-
-    String id = rq.getUuid();
-    currentDuration = toMillis(duration);
-    currentItemUuid = id;
-    var itemInfo = new ItemInfo();
-    itemInfo.setUuid(id);
-    itemInfos.push(itemInfo);
-  }
-
-  private void finishRootItem() {
-    var itemInfo = itemInfos.poll();
-    if (itemInfo == null) {
-      return;
-    }
-    FinishTestItemRQ rq = new FinishTestItemRQ();
-    markAsNotIssue(rq);
-    rq.setEndTime(startSuiteTime.plus(currentSuiteDuration, ChronoUnit.MILLIS));
-    rq.setAttributes(itemInfo.getItemAttributes());
-    rq.setDescription(itemInfo.getDescription());
-    eventPublisher.publishEvent(
-        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
-    status = null;
-  }
-
-  private void finishTestItem() {
-    var itemInfo = itemInfos.poll();
-    if (itemInfo == null) {
-      return;
-    }
-    FinishTestItemRQ rq = new FinishTestItemRQ();
-    markAsNotIssue(rq);
-    Instant endTime = startItemTime.plus(currentDuration, ChronoUnit.MILLIS);
-    commonDuration += currentDuration;
-    rq.setEndTime(endTime);
-    rq.setStatus(Optional.ofNullable(status).orElse(StatusEnum.PASSED).name());
-    rq.setAttributes(itemInfo.getItemAttributes());
-    rq.setDescription(itemInfo.getDescription());
-    currentItemUuid = itemInfo.getUuid();
-    eventPublisher.publishEvent(
-        new FinishItemRqEvent(this, projectName, currentItemUuid, rq));
-    status = null;
-  }
-
-  private void markAsNotIssue(FinishTestItemRQ rq) {
-    if (StatusEnum.SKIPPED.equals(status) && isSkippedNotIssue) {
-      Issue issue = new Issue();
-      issue.setIssueType(NOT_ISSUE_FLAG.getValue());
-      rq.setIssue(issue);
-    }
-  }
-
-  private void attachLog(LogLevel logLevel) {
-    if (null != message && message.length() != 0) {
-      SaveLogRQ saveLogRQ = new SaveLogRQ();
-      saveLogRQ.setLevel(logLevel.name());
-      saveLogRQ.setLogTime(startItemTime);
-      saveLogRQ.setMessage(message.toString().trim());
-      saveLogRQ.setItemUuid(currentItemUuid);
-      eventPublisher.publishEvent(
-          new SaveLogRqEvent(this, projectName, saveLogRQ, null));
-      message = new StringBuilder();
-    }
-  }
-
-  private StartTestItemRQ buildStartTestRq(String name) {
-    StartTestItemRQ rq = new StartTestItemRQ();
-    rq.setUuid(UUID.randomUUID().toString());
-    rq.setLaunchUuid(launchUuid);
-    rq.setStartTime(startItemTime);
-    rq.setType(TestItemTypeEnum.TEST.name());
-    rq.setName(Strings.isNullOrEmpty(name) ? "no_name" : name);
-    return rq;
-  }
-
-  private void pushDescription() {
-    if (!StringUtils.isEmpty(message) && itemInfos.peek() != null) {
-      itemInfos.peek().setDescription(message.toString());
-      message = new StringBuilder();
-    }
-  }
-
-  public void withParameters(String launchId, String projectName, boolean isSkippedNotIssue) {
-    this.projectName = projectName;
-    this.launchUuid = launchId;
-    this.isSkippedNotIssue = isSkippedNotIssue;
-  }
-
-  public Instant getStartSuiteTime() {
-    return startSuiteTime;
-  }
-
-  public Instant getInitialTime() {
-    return initialTime;
-  }
-
-  public long getCommonDuration() {
-    return commonDuration;
   }
 
   private boolean isParsedTimeStampHasOffset(TemporalAccessor temporalAccessor) {
