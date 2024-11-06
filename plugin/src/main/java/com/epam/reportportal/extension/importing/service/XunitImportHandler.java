@@ -222,11 +222,11 @@ public class XunitImportHandler extends DefaultHandler {
   private void startStepItem(Attributes attributes) {
     var time = ofNullable(resolveStartTime(attributes)).orElse(currentTime);
     var rq = new StartTestItemRQ();
+    rq.setUuid(UUID.randomUUID().toString());
     rq.setLaunchUuid(launchUuid);
     rq.setType(TestItemTypeEnum.STEP.name());
     rq.setName(
         StringUtils.abbreviate(attributes.getValue(ATTR_NAME.getValue()), MAX_ENTITY_NAME_LENGTH));
-    rq.setUuid(UUID.randomUUID().toString());
     rq.setStartTime(time);
 
     eventPublisher.publishEvent(
@@ -256,6 +256,7 @@ public class XunitImportHandler extends DefaultHandler {
     }
     var rq = new FinishTestItemRQ();
     markAsNotIssue(rq);
+    rq.setLaunchUuid(launchUuid);
     rq.setEndTime(itemInfo.getStartTime().plus(itemInfo.getDuration(), ChronoUnit.MILLIS));
     rq.setAttributes(itemInfo.getItemAttributes());
     rq.setDescription(itemInfo.getDescription());
@@ -278,6 +279,7 @@ public class XunitImportHandler extends DefaultHandler {
 
     var rq = new FinishTestItemRQ();
     markAsNotIssue(rq);
+    rq.setLaunchUuid(launchUuid);
     rq.setEndTime(endTime);
     rq.setStatus(ofNullable(status).orElse(StatusEnum.PASSED).name());
     rq.setAttributes(itemInfo.getItemAttributes());
@@ -293,6 +295,7 @@ public class XunitImportHandler extends DefaultHandler {
   private void attachLog(LogLevel logLevel) {
     if (null != message && message.length() != 0) {
       var saveLogRQ = new SaveLogRQ();
+      saveLogRQ.setLaunchUuid(launchUuid);
       saveLogRQ.setLevel(logLevel.name());
       saveLogRQ.setLogTime(itemInfos.peek().getStartTime());
       saveLogRQ.setMessage(message.toString().trim());
