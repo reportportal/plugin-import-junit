@@ -24,6 +24,8 @@ import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.dao.LaunchRepository;
 import java.io.InputStream;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,6 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public class XmlImportStrategy extends AbstractImportStrategy {
 
+  private static final Logger log = LoggerFactory.getLogger(XmlImportStrategy.class);
   private final XunitParseService xunitParseService;
 
   public XmlImportStrategy(ApplicationEventPublisher eventPublisher,
@@ -51,7 +54,7 @@ public class XmlImportStrategy extends AbstractImportStrategy {
       updateStartTime(launchUuid, parseResults.getStartTime());
       return launchUuid;
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Error during launch import", e);
       Optional.ofNullable(launchUuid).ifPresent(this::updateBrokenLaunch);
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, cleanMessage(e));
     }
