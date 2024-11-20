@@ -65,7 +65,7 @@ public class XunitParseService {
     } catch (SAXException | IOException | ParserConfigurationException e) {
       throw new ReportPortalException(ErrorType.PARSING_XML_ERROR, e.getMessage());
     }
-    return new ParseResults(handler.getInitialTime(), handler.getCommonDuration());
+    return new ParseResults(handler.getLowestTime(), handler.getCommonDuration());
   }
 
 }
