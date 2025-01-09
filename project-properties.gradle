@@ -1,12 +1,26 @@
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+def commonScriptsUrl = 'https://raw.githubusercontent.com/reportportal/gradle-scripts/'
 
 project.ext {
+    publishRepo = "https://maven.pkg.github.com/reportportal/plugin-import-junit"
     releaseMode = project.hasProperty("releaseMode")
-    pluginsDir = "$buildDir/jars"
-
+    pluginsDir = "$buildDir/plugins"
+    scriptsUrl = commonScriptsUrl + (releaseMode ? getProperty('scripts.version') : 'develop')
+    excludeTests = [
+            '**/entity/**',
+            '**/model/**',
+    ]
+    limits = [
+            'instruction': 30,
+            'branch'     : 17,
+            'line'       : 30,
+            'complexity' : 26,
+            'method'     : 29,
+            'class'      : 30
+    ]
 }
 
-wrapper {
-    gradleVersion = '8.5'
-}

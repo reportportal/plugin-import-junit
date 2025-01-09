@@ -1,3 +1,2 @@
-rootProject.name = 'plugin-import-junit'
-include 'plugin-junit'
+rootProject.name = 'plugin-junit'
 
