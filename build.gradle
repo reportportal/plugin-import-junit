@@ -1,8 +1,9 @@
 plugins {
-    id "io.spring.dependency-management" version "1.0.9.RELEASE"
+    id 'io.spring.dependency-management' version '1.1.7'
     id 'java'
     id 'jacoco'
     id "com.github.node-gradle.node" version "2.2.1"
+    id "org.springframework.boot" version "3.4.2" apply false
 }
 
 
@@ -39,19 +40,18 @@ dependencyManagement {
     }
 }
 
+ext['spring-boot.version'] = "${springBootVersion}"
+
 dependencies {
     if (releaseMode) {
         implementation 'com.epam.reportportal:commons-dao'
         implementation 'com.epam.reportportal:plugin-api'
         annotationProcessor 'com.epam.reportportal:plugin-api'
     } else {
-        implementation 'com.github.reportportal:commons-dao:1e6fe09'
-        implementation 'com.github.reportportal:commons:6e23763'
-        implementation 'com.github.reportportal:plugin-api:815c74a'
-        annotationProcessor 'com.github.reportportal:plugin-api:815c74a'
+        implementation 'com.github.reportportal:commons-dao:11fa2a6'
+        implementation 'com.github.reportportal:plugin-api:8874441'
+        annotationProcessor 'com.github.reportportal:plugin-api:8874441'
     }
-    implementation('org.hibernate:hibernate-core:5.4.18.Final')
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.7'
 
 }
 
@@ -136,6 +136,3 @@ task assemblePlugin(type: Copy) {
 task assemblePlugins(type: Copy) {
     dependsOn subprojects.assemblePlugin
 }
-
-//compileJava.dependsOn npm_run_build
-

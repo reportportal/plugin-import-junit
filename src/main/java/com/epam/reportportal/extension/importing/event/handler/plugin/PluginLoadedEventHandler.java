@@ -1,5 +1,7 @@
 package com.epam.reportportal.extension.importing.event.handler.plugin;
 
+import static java.util.Optional.ofNullable;
+
 import com.epam.reportportal.extension.event.PluginEvent;
 import com.epam.reportportal.extension.importing.ImportXUnitPluginExtension;
 import com.epam.reportportal.extension.importing.event.handler.EventHandler;
@@ -10,7 +12,6 @@ import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
 import com.epam.ta.reportportal.entity.integration.Integration;
 import com.epam.ta.reportportal.entity.integration.IntegrationParams;
 import com.epam.ta.reportportal.entity.integration.IntegrationType;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -20,8 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import static java.util.Optional.ofNullable;
 
 /**
  * @author Andrei Piankouski
