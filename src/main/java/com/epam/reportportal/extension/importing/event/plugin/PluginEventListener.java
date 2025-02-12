@@ -1,10 +1,10 @@
 package com.epam.reportportal.extension.importing.event.plugin;
 
+import static java.util.Optional.ofNullable;
+
 import com.epam.reportportal.extension.event.PluginEvent;
 import com.epam.reportportal.extension.importing.event.EventHandlerFactory;
 import org.springframework.context.ApplicationListener;
-
-import static java.util.Optional.ofNullable;
 
 /**
  * @author Andrei Piankouski
