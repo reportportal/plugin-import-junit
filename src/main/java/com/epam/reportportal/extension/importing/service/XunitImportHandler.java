@@ -133,7 +133,7 @@ public class XunitImportHandler extends DefaultHandler {
         handleProperty(attributes);
       case UNKNOWN:
       default:
-        LOGGER.warn("Unknown tag: {}", qName);
+        LOGGER.debug("Unknown tag: {}", qName);
         break;
     }
   }
@@ -163,7 +163,7 @@ public class XunitImportHandler extends DefaultHandler {
         pushDescription();
       case UNKNOWN:
       default:
-        LOGGER.warn("Unknown tag: {}", qName);
+        LOGGER.debug("Unknown tag: {}", qName);
         break;
     }
   }
