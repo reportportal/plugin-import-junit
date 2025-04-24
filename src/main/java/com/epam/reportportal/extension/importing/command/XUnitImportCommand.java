@@ -9,8 +9,6 @@ import static com.epam.reportportal.rules.exception.ErrorType.INCORRECT_REQUEST;
 import static org.apache.commons.io.FileUtils.ONE_MB;
 
 import com.epam.reportportal.extension.CommonPluginCommand;
-import com.epam.reportportal.extension.importing.model.LaunchImportCompletionRS;
-import com.epam.reportportal.extension.importing.model.LaunchImportData;
 import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
 import com.epam.reportportal.extension.importing.service.ImportStrategy;
 import com.epam.reportportal.extension.importing.service.ImportStrategyFactory;
@@ -18,7 +16,7 @@ import com.epam.reportportal.extension.util.RequestEntityConverter;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.dao.LaunchRepository;
-import com.epam.ta.reportportal.ws.reporting.OperationCompletionRS;
+import com.epam.ta.reportportal.ws.reporting.StartLaunchRS;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,7 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * @author Pavel Bortnik
  */
-public class XUnitImportCommand implements CommonPluginCommand<OperationCompletionRS> {
+public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
 
   public static final long MAX_FILE_SIZE = 32 * ONE_MB;
   private static final String FILE_PARAM = "file";
@@ -47,7 +45,7 @@ public class XUnitImportCommand implements CommonPluginCommand<OperationCompleti
   }
 
   @Override
-  public OperationCompletionRS executeCommand(Map<String, Object> params) {
+  public StartLaunchRS executeCommand(Map<String, Object> params) {
 
     LaunchImportRQ launchImportRQ = Optional.ofNullable(params.get(ENTITY_PARAM))
         .map(it -> requestEntityConverter.getEntity(ENTITY_PARAM, params, LaunchImportRQ.class))
@@ -89,20 +87,9 @@ public class XUnitImportCommand implements CommonPluginCommand<OperationCompleti
     );
   }
 
-  private OperationCompletionRS prepareLaunchImportResponse(String launchId) {
-
-    var launch = launchRepository.findByUuid(launchId)
-        .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND));
-
-    var data = new LaunchImportData();
-    data.setId(launchId);
-    data.setName(launch.getName());
-    data.setNumber(launch.getNumber());
-
-    var response = new LaunchImportCompletionRS();
-    response.setResultMessage("Launch with id = " + launchId + " is successfully imported.");
-    response.setData(data);
-
-    return response;
+  private StartLaunchRS prepareLaunchImportResponse(String uuid) {
+    var data = new StartLaunchRS();
+    data.setId(uuid);
+    return data;
   }
 }

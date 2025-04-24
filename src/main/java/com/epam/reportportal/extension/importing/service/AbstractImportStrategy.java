@@ -111,20 +111,18 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
    * a default date if the launch is broken, time should be updated to not to broke
    * the statistics
    */
-  protected void updateBrokenLaunch(String savedLaunchId) {
-    if (savedLaunchId != null) {
-      Launch launch = launchRepository.findByUuid(savedLaunchId)
-          .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND));
-      launch.setStartTime(Instant.now());
-      launch.setStatus(StatusEnum.INTERRUPTED);
-      launchRepository.save(launch);
-    }
+  protected void updateBrokenLaunch(String launchUuid) {
+    Launch launch = launchRepository.findByUuid(launchUuid)
+        .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND, launchUuid));
+    launch.setStartTime(Instant.now());
+    launch.setStatus(StatusEnum.INTERRUPTED);
+    launchRepository.save(launch);
   }
 
 
   protected void updateStartTime(String launchUuid, Instant startTime) {
-    final Launch launch = launchRepository.findByUuid(launchUuid)
-        .orElseThrow(() -> new ReportPortalException(ErrorType.NOT_FOUND));
+    Launch launch = launchRepository.findByUuid(launchUuid)
+        .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND, launchUuid));
     launch.setStartTime(startTime);
     launchRepository.save(launch);
   }
