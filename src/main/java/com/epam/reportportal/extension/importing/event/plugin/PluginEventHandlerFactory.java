@@ -6,7 +6,6 @@ import com.epam.reportportal.extension.importing.event.handler.EventHandler;
 import com.epam.reportportal.extension.importing.event.handler.plugin.PluginLoadedEventHandler;
 import com.epam.ta.reportportal.dao.IntegrationRepository;
 import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
-
 import java.util.HashMap;
 import java.util.Map;
 
