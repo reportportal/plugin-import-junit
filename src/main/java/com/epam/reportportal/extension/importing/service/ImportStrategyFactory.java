@@ -3,9 +3,9 @@ package com.epam.reportportal.extension.importing.service;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
 
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.dao.LaunchRepository;
+import com.epam.reportportal.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.infrastructure.rules.exception.ErrorType;
+import com.epam.reportportal.infrastructure.rules.exception.ReportPortalException;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
@@ -16,8 +16,7 @@ public class ImportStrategyFactory {
 
   private final Map<String, ImportStrategy> STRATEGY_MAPPING;
 
-  public ImportStrategyFactory(ApplicationEventPublisher eventPublisher,
-      LaunchRepository launchRepository) {
+  public ImportStrategyFactory(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository) {
     STRATEGY_MAPPING = ImmutableMap.<String, ImportStrategy>builder()
         .put(ZIP_EXTENSION, new ZipImportStrategy(eventPublisher, launchRepository))
         .put(XML_EXTENSION, new XmlImportStrategy(eventPublisher, launchRepository)).build();

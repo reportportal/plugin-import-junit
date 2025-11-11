@@ -19,9 +19,9 @@ package com.epam.reportportal.extension.importing.service;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
 
 import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.dao.LaunchRepository;
+import com.epam.reportportal.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.infrastructure.rules.exception.ErrorType;
+import com.epam.reportportal.infrastructure.rules.exception.ReportPortalException;
 import java.io.InputStream;
 import java.util.Optional;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,8 +34,7 @@ public class XmlImportStrategy extends AbstractImportStrategy {
 
   private final XunitParseService xunitParseService;
 
-  public XmlImportStrategy(ApplicationEventPublisher eventPublisher,
-      LaunchRepository launchRepository) {
+  public XmlImportStrategy(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository) {
     super(eventPublisher, launchRepository);
     this.xunitParseService = new XunitParseService(eventPublisher);
   }
