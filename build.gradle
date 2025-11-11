@@ -41,8 +41,8 @@ dependencies {
         implementation 'com.epam.reportportal:service-api'
         annotationProcessor 'com.epam.reportportal:service-api'
     } else {
-        implementation 'com.github.reportportal:service-api:develop-SNAPSHOT'
-        annotationProcessor 'com.github.reportportal:service-api:develop-SNAPSHOT'
+        implementation 'com.github.reportportal:service-api:305b152'
+        annotationProcessor 'com.github.reportportal:service-api:305b152'
     }
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
