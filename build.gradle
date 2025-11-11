@@ -3,7 +3,7 @@ plugins {
     id 'java'
     id 'jacoco'
     id "com.github.node-gradle.node" version "2.2.1"
-    id "org.springframework.boot" version "3.4.2" apply false
+    id "org.springframework.boot" version "3.4.11" apply false
 }
 
 
@@ -34,25 +34,23 @@ repositories {
     }
 }
 
-dependencyManagement {
-    imports {
-        mavenBom(releaseMode ? 'com.epam.reportportal:commons-bom:' + getProperty('bom.version') : 'com.epam.reportportal:commons-bom:5.13.0')
-    }
-}
-
 ext['spring-boot.version'] = "${springBootVersion}"
 
 dependencies {
     if (releaseMode) {
-        implementation 'com.epam.reportportal:commons-dao'
-        implementation 'com.epam.reportportal:commons'
-        implementation 'com.epam.reportportal:plugin-api'
-        annotationProcessor 'com.epam.reportportal:plugin-api'
+        implementation 'com.epam.reportportal:service-api'
+        annotationProcessor 'com.epam.reportportal:service-api'
     } else {
-        implementation 'com.github.reportportal:commons-dao:9b8b695'
-        implementation 'com.github.reportportal:plugin-api:f59b724'
-        annotationProcessor 'com.github.reportportal:plugin-api:f59b724'
+        implementation 'com.github.reportportal:service-api:305b152'
+        annotationProcessor 'com.github.reportportal:service-api:305b152'
     }
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'org.springframework:spring-context'
+    implementation 'org.springframework:spring-web'
+    implementation 'org.springframework.data:spring-data-jpa'
+    implementation "org.springframework:spring-test"
+    implementation 'org.hibernate.orm:hibernate-core'
 }
 
 test {

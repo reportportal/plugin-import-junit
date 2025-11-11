@@ -19,9 +19,10 @@ import static com.epam.reportportal.extension.importing.service.FileExtensionCon
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
 
 import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.dao.LaunchRepository;
+
+import com.epam.reportportal.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.infrastructure.rules.exception.ErrorType;
+import com.epam.reportportal.infrastructure.rules.exception.ReportPortalException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,8 +47,7 @@ public class ZipImportStrategy extends AbstractImportStrategy {
 
   private final XunitParseService xunitParseService;
 
-  public ZipImportStrategy(ApplicationEventPublisher eventPublisher,
-      LaunchRepository launchRepository) {
+  public ZipImportStrategy(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository) {
     super(eventPublisher, launchRepository);
     this.xunitParseService = new XunitParseService(eventPublisher);
   }

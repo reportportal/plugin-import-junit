@@ -1,6 +1,6 @@
 package com.epam.reportportal.extension.importing.model;
 
-import com.epam.ta.reportportal.ws.reporting.ItemAttributesRQ;
+import com.epam.reportportal.reporting.ItemAttributesRQ;
 import java.time.Instant;
 import java.util.Set;
 
