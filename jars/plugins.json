@@ -4,9 +4,9 @@
     "description": "Reinforce you ReportPortal instance with JUnit import functionality and easily upload your log files right to ReportPortal.",
     "releases": [
       {
-        "version": "1.0.0",
-        "date": "May 7, 2024, 2:42:18 PM",
-        "url": "https://raw.githubusercontent.com/reportportal/plugin-import-junit/1.1.0/jars/plugin-junit-1.1.0.jar"
+        "version": "2.0.0.Beta",
+        "date": "Nov 27, 2025, 4:56:18PM",
+        "url": "https://raw.githubusercontent.com/reportportal/plugin-import-junit/2.0.0.Beta/jars/plugin-junit-2.0.0.Beta.jar"
       }
     ]
   }
