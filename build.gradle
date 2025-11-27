@@ -37,16 +37,8 @@ repositories {
 ext['spring-boot.version'] = "${springBootVersion}"
 
 dependencies {
-    implementation 'com.github.reportportal:service-api:0767d6b'
-    annotationProcessor 'com.github.reportportal:service-api:0767d6b'
-
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-    implementation 'org.springframework:spring-context'
-    implementation 'org.springframework:spring-web'
-    implementation 'org.springframework.data:spring-data-jpa'
-    implementation "org.springframework:spring-test"
-    implementation 'org.hibernate.orm:hibernate-core'
+    implementation 'com.github.reportportal:service-api:2ea10ef'
+    annotationProcessor 'com.github.reportportal:service-api:2ea10ef'
 }
 
 test {
