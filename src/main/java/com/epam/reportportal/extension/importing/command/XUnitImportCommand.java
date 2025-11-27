@@ -3,9 +3,9 @@ package com.epam.reportportal.extension.importing.command;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
 import static com.epam.reportportal.extension.util.CommandParamUtils.ENTITY_PARAM;
-import static com.epam.reportportal.rules.commons.validation.BusinessRule.expect;
-import static com.epam.reportportal.rules.exception.ErrorType.BAD_REQUEST_ERROR;
-import static com.epam.reportportal.rules.exception.ErrorType.INCORRECT_REQUEST;
+import static com.epam.reportportal.infrastructure.rules.commons.validation.BusinessRule.expect;
+import static com.epam.reportportal.infrastructure.rules.exception.ErrorType.BAD_REQUEST_ERROR;
+import static com.epam.reportportal.infrastructure.rules.exception.ErrorType.INCORRECT_REQUEST;
 import static org.apache.commons.io.FileUtils.ONE_MB;
 
 import com.epam.reportportal.extension.CommonPluginCommand;
@@ -13,10 +13,9 @@ import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
 import com.epam.reportportal.extension.importing.service.ImportStrategy;
 import com.epam.reportportal.extension.importing.service.ImportStrategyFactory;
 import com.epam.reportportal.extension.util.RequestEntityConverter;
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.dao.LaunchRepository;
-import com.epam.ta.reportportal.ws.reporting.StartLaunchRS;
+import com.epam.reportportal.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.infrastructure.rules.exception.ReportPortalException;
+import com.epam.reportportal.reporting.StartLaunchRS;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,8 +51,7 @@ public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
         .orElseGet(LaunchImportRQ::new);
 
     MultipartFile file = (MultipartFile) Optional.ofNullable(params.get(FILE_PARAM))
-        .orElseThrow(() -> new ReportPortalException(
-            ErrorType.BAD_REQUEST_ERROR, "File for import wasn't provided"));
+        .orElseThrow(() -> new ReportPortalException(BAD_REQUEST_ERROR, "File for import wasn't provided"));
 
     validate(file);
 
@@ -61,8 +59,7 @@ public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
         file.getOriginalFilename());
 
     String projectName = Optional.ofNullable(params.get(PROJECT_NAME)).map(String::valueOf)
-        .orElseThrow(
-            () -> new ReportPortalException(BAD_REQUEST_ERROR, "Project name wasn't provided"));
+        .orElseThrow(() -> new ReportPortalException(BAD_REQUEST_ERROR, "Project name wasn't provided"));
 
     String launchUuid = importStrategy.importLaunch(file, projectName, launchImportRQ);
     return prepareLaunchImportResponse(launchUuid);
@@ -77,14 +74,10 @@ public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
     expect(file.getOriginalFilename(), Objects::nonNull).verify(INCORRECT_REQUEST,
         "File name should be not empty."
     );
-    expect(file.getOriginalFilename(),
-        it -> it.endsWith(ZIP_EXTENSION) || it.endsWith(XML_EXTENSION)
-    ).verify(INCORRECT_REQUEST,
-        "Should be a zip archive or an xml file " + file.getOriginalFilename()
-    );
-    expect(file.getSize(), size -> size <= MAX_FILE_SIZE).verify(INCORRECT_REQUEST,
-        "File size is more than 32 Mb."
-    );
+    expect(file.getOriginalFilename(), it -> it.endsWith(ZIP_EXTENSION) || it.endsWith(XML_EXTENSION))
+        .verify(INCORRECT_REQUEST, "Should be a zip archive or an xml file " + file.getOriginalFilename()
+        );
+    expect(file.getSize(), size -> size <= MAX_FILE_SIZE).verify(INCORRECT_REQUEST, "File size is more than 32 Mb.");
   }
 
   private StartLaunchRS prepareLaunchImportResponse(String uuid) {
