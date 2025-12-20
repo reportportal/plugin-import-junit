@@ -191,7 +191,7 @@ public class XunitImportHandler extends DefaultHandler {
     Instant time = ofNullable(resolveStartTime(attributes)).orElse(Instant.now());
     currentTime = time;
     var rq = buildStartTestRq(attributes.getValue(ATTR_NAME.getValue()), time);
-    eventPublisher.publishEvent(new StartRootItemRqEvent(this, projectName, rq));
+    eventPublisher.publishEvent(new StartRootItemRqEvent(projectName, rq));
 
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
@@ -212,7 +212,7 @@ public class XunitImportHandler extends DefaultHandler {
         time);
     if (itemInfos.peek() != null) {
       eventPublisher.publishEvent(
-          new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+          new StartChildItemRqEvent(projectName, itemInfos.peek().getUuid(), rq));
     }
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
@@ -230,7 +230,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setStartTime(time);
 
     eventPublisher.publishEvent(
-        new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+        new StartChildItemRqEvent(projectName, itemInfos.peek().getUuid(), rq));
 
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
@@ -262,7 +262,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setDescription(itemInfo.getDescription());
 
     eventPublisher.publishEvent(
-        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
+        new FinishItemRqEvent(projectName, itemInfo.getUuid(), rq));
 
     status = null;
     currentTime = null;
@@ -286,7 +286,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setDescription(itemInfo.getDescription());
 
     eventPublisher.publishEvent(
-        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
+        new FinishItemRqEvent(projectName, itemInfo.getUuid(), rq));
 
     status = null;
     currentTime = endTime;
@@ -300,7 +300,7 @@ public class XunitImportHandler extends DefaultHandler {
       saveLogRQ.setLogTime(itemInfos.peek().getStartTime());
       saveLogRQ.setMessage(message.toString().trim());
       saveLogRQ.setItemUuid(itemInfos.peek().getUuid());
-      eventPublisher.publishEvent(new SaveLogRqEvent(this, projectName, saveLogRQ, null));
+      eventPublisher.publishEvent(new SaveLogRqEvent(projectName, saveLogRQ, null));
       message = new StringBuilder();
     }
   }
