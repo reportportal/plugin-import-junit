@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.epam.reportportal.extension.importing.service;
 
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
@@ -31,6 +32,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * @author <a href="mailto:ivan_budayeu@epam.com">Ivan Budayeu</a>
  */
+@Slf4j
 public class ZipImportStrategy extends AbstractImportStrategy {
 
   private static final Predicate<ZipEntry> isFile = zipEntry -> !zipEntry.isDirectory();
@@ -70,14 +73,14 @@ public class ZipImportStrategy extends AbstractImportStrategy {
       updateStartTime(launchUuid, results.getStartTime());
       return launchUuid;
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Error during import of zip archive", e);
       updateBrokenLaunch(savedLaunchUuid);
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, cleanMessage(e));
     } finally {
       try {
         Files.deleteIfExists(zip.getAbsoluteFile().toPath());
       } catch (IOException e) {
-        e.printStackTrace();
+        log.error("Error during deletion of temporary zip file", e);
       }
     }
   }
