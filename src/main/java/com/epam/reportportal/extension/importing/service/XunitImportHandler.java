@@ -216,6 +216,8 @@ public class XunitImportHandler extends DefaultHandler {
     }
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
+    itemInfo.setStartTime(time);
+    itemInfo.setDuration(toMillis(attributes.getValue(ATTR_TIME.getValue())));
     itemInfos.push(itemInfo);
   }
 
