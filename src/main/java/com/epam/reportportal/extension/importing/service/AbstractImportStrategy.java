@@ -79,6 +79,33 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
     return launchUuid;
   }
 
+  protected boolean isImportIntoExistingLaunch(LaunchImportRQ rq) {
+    return ofNullable(rq.getLaunchUuid()).map(String::trim).filter(it -> !it.isEmpty()).isPresent();
+  }
+
+  protected String getLaunchUuid(String launchName, String projectName, LaunchImportRQ rq) {
+    if (isImportIntoExistingLaunch(rq)) {
+      return rq.getLaunchUuid();
+    }
+    return startLaunch(launchName, projectName, rq);
+  }
+
+  protected void completeCreatedLaunch(String launchUuid, String projectName, ParseResults results,
+      LaunchImportRQ rq) {
+    if (isImportIntoExistingLaunch(rq)) {
+      return;
+    }
+    finishLaunch(launchUuid, projectName, results);
+    updateStartTime(launchUuid, results.getStartTime());
+  }
+
+  protected void updateBrokenCreatedLaunch(String launchUuid, LaunchImportRQ rq) {
+    if (isImportIntoExistingLaunch(rq)) {
+      return;
+    }
+    ofNullable(launchUuid).ifPresent(this::updateBrokenLaunch);
+  }
+
   protected void finishLaunch(String launchUuid, String projectName, ParseResults results) {
     FinishExecutionRQ finishExecutionRQ = new FinishExecutionRQ();
     finishExecutionRQ.setEndTime(results.getEndTime());

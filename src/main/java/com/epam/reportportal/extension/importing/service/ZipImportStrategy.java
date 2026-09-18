@@ -54,25 +54,23 @@ public class ZipImportStrategy extends AbstractImportStrategy {
 
   @Override
   public String importLaunch(MultipartFile file, String projectName, LaunchImportRQ rq) {
-    //copy of the launch's id to use it in catch block if something goes wrong
-    String savedLaunchUuid = null;
+    String launchUuid = null;
     File zip = transferToTempFile(file);
 
     try (ZipFile zipFile = new ZipFile(zip)) {
-      String launchUuid = startLaunch(getLaunchName(file, ZIP_EXTENSION), projectName, rq);
-      savedLaunchUuid = launchUuid;
+      launchUuid = getLaunchUuid(getLaunchName(file, ZIP_EXTENSION), projectName, rq);
+      String targetLaunchUuid = launchUuid;
       List<ParseResults> parseResults = zipFile.stream().filter(isFile.and(isXml))
           .map(zipEntry ->
-              xunitParseService.call(getEntryStream(zipFile, zipEntry), launchUuid,
+              xunitParseService.call(getEntryStream(zipFile, zipEntry), targetLaunchUuid,
                   projectName,
                   isSkippedNotIssue(rq.getAttributes()))).collect(Collectors.toList());
       ParseResults results = processResults(parseResults);
-      finishLaunch(launchUuid, projectName, results);
-      updateStartTime(launchUuid, results.getStartTime());
+      completeCreatedLaunch(launchUuid, projectName, results, rq);
       return launchUuid;
     } catch (Exception e) {
       e.printStackTrace();
-      updateBrokenLaunch(savedLaunchUuid);
+      updateBrokenCreatedLaunch(launchUuid, rq);
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, cleanMessage(e));
     } finally {
       try {

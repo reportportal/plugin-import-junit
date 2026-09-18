@@ -9,6 +9,10 @@ import java.util.Set;
 
 public class LaunchImportRQ {
 
+  @JsonProperty("launchUuid")
+  @JsonAlias({"launchUuid", "launch_uuid"})
+  private String launchUuid;
+
   @JsonProperty(value = "name")
   protected String name;
 
@@ -25,6 +29,14 @@ public class LaunchImportRQ {
 
   @JsonProperty("mode")
   private Mode mode;
+
+  public String getLaunchUuid() {
+    return launchUuid;
+  }
+
+  public void setLaunchUuid(String launchUuid) {
+    this.launchUuid = launchUuid;
+  }
 
   public String getName() {
     return name;
