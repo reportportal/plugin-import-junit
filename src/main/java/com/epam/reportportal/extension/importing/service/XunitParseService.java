@@ -36,11 +36,6 @@ public class XunitParseService {
   }
 
   public ParseResults call(InputStream inputStream, String launchUuid, String projectName,
-      boolean isSkippedNotIssue) {
-    return call(inputStream, launchUuid, projectName, isSkippedNotIssue, null);
-  }
-
-  public ParseResults call(InputStream inputStream, String launchUuid, String projectName,
       boolean isSkippedNotIssue, Instant launchStartTime) {
     XunitImportHandler handler;
     try {

@@ -191,7 +191,7 @@ public class XunitImportHandler extends DefaultHandler {
   private void startRootItem(Attributes attributes) {
     Instant time = ofNullable(resolveStartTime(attributes)).orElse(Instant.now());
     long duration = toMillis(attributes.getValue(ATTR_TIME.getValue()));
-    validateItemTime(time, "start time");
+    validateItemTime(time);
     currentTime = time;
     var rq = buildStartTestRq(attributes.getValue(ATTR_NAME.getValue()), time);
     eventPublisher.publishEvent(new StartRootItemRqEvent(this, projectName, rq));
@@ -210,7 +210,7 @@ public class XunitImportHandler extends DefaultHandler {
   private void startTestItem(Attributes attributes) {
     Instant time = ofNullable(resolveStartTime(attributes)).orElse(itemInfos.peek().getStartTime());
     long duration = toMillis(attributes.getValue(ATTR_TIME.getValue()));
-    validateItemTime(time, "start time");
+    validateItemTime(time);
     currentTime = time;
     StartTestItemRQ rq = buildStartTestRq(
         StringUtils.abbreviate(attributes.getValue(ATTR_NAME.getValue()), MAX_ENTITY_NAME_LENGTH),
@@ -229,7 +229,7 @@ public class XunitImportHandler extends DefaultHandler {
   private void startStepItem(Attributes attributes) {
     var time = ofNullable(resolveStartTime(attributes)).orElse(currentTime);
     long duration = toMillis(attributes.getValue(ATTR_TIME.getValue()));
-    validateItemTime(time, "start time");
+    validateItemTime(time);
     var rq = new StartTestItemRQ();
     rq.setUuid(UUID.randomUUID().toString());
     rq.setLaunchUuid(launchUuid);
@@ -303,7 +303,7 @@ public class XunitImportHandler extends DefaultHandler {
   }
 
   private void attachLog(LogLevel logLevel) {
-    if (null != message && message.length() != 0) {
+    if (null != message && !message.isEmpty()) {
       var saveLogRQ = new SaveLogRQ();
       saveLogRQ.setLaunchUuid(launchUuid);
       saveLogRQ.setLevel(logLevel.name());
@@ -316,10 +316,10 @@ public class XunitImportHandler extends DefaultHandler {
     }
   }
 
-  private void validateItemTime(Instant itemTime, String fieldName) {
+  private void validateItemTime(Instant itemTime) {
     if (launchStartTime != null && itemTime.isBefore(launchStartTime)) {
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
-          String.format("Item %s '%s' is earlier than launch start time '%s'", fieldName, itemTime,
+          String.format("Item %s '%s' is earlier than launch start time '%s'", "start time", itemTime,
               launchStartTime));
     }
   }
