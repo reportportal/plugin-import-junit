@@ -73,6 +73,7 @@ public class XunitImportHandler extends DefaultHandler {
   private String projectName;
   private String launchUuid;
   private boolean isSkippedNotIssue = false;
+  private Instant launchStartTime;
   private long commonDuration;
   private Deque<ItemInfo> itemInfos;
   private StatusEnum status;
@@ -189,6 +190,8 @@ public class XunitImportHandler extends DefaultHandler {
 
   private void startRootItem(Attributes attributes) {
     Instant time = ofNullable(resolveStartTime(attributes)).orElse(Instant.now());
+    long duration = toMillis(attributes.getValue(ATTR_TIME.getValue()));
+    validateItemTime(time, "start time");
     currentTime = time;
     var rq = buildStartTestRq(attributes.getValue(ATTR_NAME.getValue()), time);
     eventPublisher.publishEvent(new StartRootItemRqEvent(this, projectName, rq));
@@ -196,7 +199,7 @@ public class XunitImportHandler extends DefaultHandler {
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
     itemInfo.setStartTime(time);
-    itemInfo.setDuration(toMillis(attributes.getValue(ATTR_TIME.getValue())));
+    itemInfo.setDuration(duration);
     itemInfos.push(itemInfo);
 
     if (time.isBefore(lowestTime)) {
@@ -206,6 +209,8 @@ public class XunitImportHandler extends DefaultHandler {
 
   private void startTestItem(Attributes attributes) {
     Instant time = ofNullable(resolveStartTime(attributes)).orElse(itemInfos.peek().getStartTime());
+    long duration = toMillis(attributes.getValue(ATTR_TIME.getValue()));
+    validateItemTime(time, "start time");
     currentTime = time;
     StartTestItemRQ rq = buildStartTestRq(
         StringUtils.abbreviate(attributes.getValue(ATTR_NAME.getValue()), MAX_ENTITY_NAME_LENGTH),
@@ -216,11 +221,15 @@ public class XunitImportHandler extends DefaultHandler {
     }
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
+    itemInfo.setStartTime(time);
+    itemInfo.setDuration(duration);
     itemInfos.push(itemInfo);
   }
 
   private void startStepItem(Attributes attributes) {
     var time = ofNullable(resolveStartTime(attributes)).orElse(currentTime);
+    long duration = toMillis(attributes.getValue(ATTR_TIME.getValue()));
+    validateItemTime(time, "start time");
     var rq = new StartTestItemRQ();
     rq.setUuid(UUID.randomUUID().toString());
     rq.setLaunchUuid(launchUuid);
@@ -235,7 +244,7 @@ public class XunitImportHandler extends DefaultHandler {
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
     itemInfo.setStartTime(time);
-    itemInfo.setDuration(toMillis(attributes.getValue(ATTR_TIME.getValue())));
+    itemInfo.setDuration(duration);
     itemInfos.push(itemInfo);
   }
 
@@ -257,7 +266,8 @@ public class XunitImportHandler extends DefaultHandler {
     var rq = new FinishTestItemRQ();
     markAsNotIssue(rq);
     rq.setLaunchUuid(launchUuid);
-    rq.setEndTime(itemInfo.getStartTime().plus(itemInfo.getDuration(), ChronoUnit.MILLIS));
+    Instant endTime = itemInfo.getStartTime().plus(itemInfo.getDuration(), ChronoUnit.MILLIS);
+    rq.setEndTime(endTime);
     rq.setAttributes(itemInfo.getItemAttributes());
     rq.setDescription(itemInfo.getDescription());
 
@@ -306,6 +316,14 @@ public class XunitImportHandler extends DefaultHandler {
     }
   }
 
+  private void validateItemTime(Instant itemTime, String fieldName) {
+    if (launchStartTime != null && itemTime.isBefore(launchStartTime)) {
+      throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR,
+          String.format("Item %s '%s' is earlier than launch start time '%s'", fieldName, itemTime,
+              launchStartTime));
+    }
+  }
+
   private StartTestItemRQ buildStartTestRq(String name, Instant startTime) {
     var rq = new StartTestItemRQ();
     rq.setUuid(UUID.randomUUID().toString());
@@ -348,9 +366,15 @@ public class XunitImportHandler extends DefaultHandler {
   }
 
   public void withParameters(String launchId, String projectName, boolean isSkippedNotIssue) {
+    withParameters(launchId, projectName, isSkippedNotIssue, null);
+  }
+
+  public void withParameters(String launchId, String projectName, boolean isSkippedNotIssue,
+      Instant launchStartTime) {
     this.projectName = projectName;
     this.launchUuid = launchId;
     this.isSkippedNotIssue = isSkippedNotIssue;
+    this.launchStartTime = launchStartTime;
   }
 
   public Instant getLowestTime() {

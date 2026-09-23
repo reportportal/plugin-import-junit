@@ -19,6 +19,7 @@ import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -36,6 +37,11 @@ public class XunitParseService {
 
   public ParseResults call(InputStream inputStream, String launchUuid, String projectName,
       boolean isSkippedNotIssue) {
+    return call(inputStream, launchUuid, projectName, isSkippedNotIssue, null);
+  }
+
+  public ParseResults call(InputStream inputStream, String launchUuid, String projectName,
+      boolean isSkippedNotIssue, Instant launchStartTime) {
     XunitImportHandler handler;
     try {
       SAXParserFactory spf = SAXParserFactory.newInstance();
@@ -59,7 +65,7 @@ public class XunitParseService {
       reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
 
       handler = new XunitImportHandler(applicationEventPublisher);
-      handler.withParameters(launchUuid, projectName, isSkippedNotIssue);
+      handler.withParameters(launchUuid, projectName, isSkippedNotIssue, launchStartTime);
 
       saxParser.parse(inputStream, handler);
     } catch (SAXException | IOException | ParserConfigurationException e) {

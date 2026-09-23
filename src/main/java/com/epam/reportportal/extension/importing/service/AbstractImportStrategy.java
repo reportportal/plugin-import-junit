@@ -67,6 +67,9 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
   }
 
   protected String startLaunch(String launchName, String projectName, LaunchImportRQ rq) {
+    if (rq == null) {
+      rq = new LaunchImportRQ();
+    }
     String launchUuid = UUID.randomUUID().toString();
     StartLaunchRQ startLaunchRQ = new StartLaunchRQ();
     startLaunchRQ.setUuid(launchUuid);
@@ -80,7 +83,8 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
   }
 
   protected boolean isImportIntoExistingLaunch(LaunchImportRQ rq) {
-    return ofNullable(rq.getLaunchUuid()).map(String::trim).filter(it -> !it.isEmpty()).isPresent();
+    return ofNullable(rq).map(LaunchImportRQ::getLaunchUuid).map(String::trim)
+        .filter(it -> !it.isEmpty()).isPresent();
   }
 
   protected String getLaunchUuid(String launchName, String projectName, LaunchImportRQ rq) {
@@ -88,6 +92,13 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
       return rq.getLaunchUuid();
     }
     return startLaunch(launchName, projectName, rq);
+  }
+
+  protected Instant getExistingLaunchStartTime(LaunchImportRQ rq) {
+    if (!isImportIntoExistingLaunch(rq)) {
+      return null;
+    }
+    return getLaunch(rq.getLaunchUuid()).getStartTime();
   }
 
   protected void completeCreatedLaunch(String launchUuid, String projectName, ParseResults results,
@@ -106,6 +117,11 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
     ofNullable(launchUuid).ifPresent(this::updateBrokenLaunch);
   }
 
+  protected Launch getLaunch(String launchUuid) {
+    return launchRepository.findByUuid(launchUuid)
+        .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND, launchUuid));
+  }
+
   protected void finishLaunch(String launchUuid, String projectName, ParseResults results) {
     FinishExecutionRQ finishExecutionRQ = new FinishExecutionRQ();
     finishExecutionRQ.setEndTime(results.getEndTime());
@@ -118,6 +134,10 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
             attribute -> SKIPPED_IS_NOT_ISSUE.equals(attribute.getKey()) && attribute.isSystem())
         .findAny().filter(itemAttributesRQ -> Boolean.parseBoolean(itemAttributesRQ.getValue()))
         .isPresent();
+  }
+
+  protected Boolean isSkippedNotIssue(LaunchImportRQ rq) {
+    return isSkippedNotIssue(ofNullable(rq).map(LaunchImportRQ::getAttributes).orElse(null));
   }
 
   /**
@@ -139,8 +159,7 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
    * the statistics
    */
   protected void updateBrokenLaunch(String launchUuid) {
-    Launch launch = launchRepository.findByUuid(launchUuid)
-        .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND, launchUuid));
+    Launch launch = getLaunch(launchUuid);
     launch.setStartTime(Instant.now());
     launch.setStatus(StatusEnum.INTERRUPTED);
     launchRepository.save(launch);
@@ -148,8 +167,7 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
 
 
   protected void updateStartTime(String launchUuid, Instant startTime) {
-    Launch launch = launchRepository.findByUuid(launchUuid)
-        .orElseThrow(() -> new ReportPortalException(ErrorType.LAUNCH_NOT_FOUND, launchUuid));
+    Launch launch = getLaunch(launchUuid);
     launch.setStartTime(startTime);
     launchRepository.save(launch);
   }
