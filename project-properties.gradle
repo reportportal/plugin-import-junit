@@ -10,6 +10,7 @@ project.ext {
     releaseMode = project.hasProperty("releaseMode")
     pluginsDir = "$buildDir/plugins"
     scriptsUrl = commonScriptsUrl + (releaseMode ? getProperty('scripts.version') : '5.14.0')
+
     excludeTests = [
             '**/entity/**',
             '**/model/**',
