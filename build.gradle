@@ -43,10 +43,17 @@ dependencyManagement {
 ext['spring-boot.version'] = "${springBootVersion}"
 
 dependencies {
-    implementation 'com.github.reportportal:commons-dao:5.15.6'
-    implementation 'com.github.reportportal:commons:5.15.0'
-    implementation 'com.github.reportportal:plugin-api:5.15.0'
-    annotationProcessor 'com.github.reportportal:plugin-api:5.15.0'
+    if (releaseMode) {
+        implementation 'com.epam.reportportal:commons-dao'
+        implementation 'com.epam.reportportal:commons'
+        implementation 'com.epam.reportportal:plugin-api'
+        annotationProcessor 'com.epam.reportportal:plugin-api'
+    } else {
+        implementation 'com.github.reportportal:commons-dao:b56d686'
+        implementation 'com.github.reportportal:commons:708495d'
+        implementation 'com.github.reportportal:plugin-api:c76e152'
+        annotationProcessor 'com.github.reportportal:plugin-api:c76e152'
+    }
 }
 
 test {
