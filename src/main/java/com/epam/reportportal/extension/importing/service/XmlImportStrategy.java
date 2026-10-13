@@ -23,7 +23,7 @@ import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.dao.LaunchRepository;
 import java.io.InputStream;
-import java.util.Optional;
+import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -43,15 +43,15 @@ public class XmlImportStrategy extends AbstractImportStrategy {
   @Override
   public String importLaunch(MultipartFile file, String projectName, LaunchImportRQ rq) {
     String launchUuid = null;
+    Instant launchStartTime = getExistingLaunchStartTime(rq);
     try (InputStream xmlStream = file.getInputStream()) {
-      launchUuid = startLaunch(getLaunchName(file, XML_EXTENSION), projectName, rq);
+      launchUuid = getLaunchUuid(getLaunchName(file, XML_EXTENSION), projectName, rq);
       ParseResults parseResults = xunitParseService.call(xmlStream, launchUuid, projectName,
-          isSkippedNotIssue(rq.getAttributes()));
-      finishLaunch(launchUuid, projectName, parseResults);
-      updateStartTime(launchUuid, parseResults.getStartTime());
+          isSkippedNotIssue(rq), launchStartTime);
+      completeCreatedLaunch(launchUuid, projectName, parseResults, rq);
       return launchUuid;
     } catch (Exception e) {
-      Optional.ofNullable(launchUuid).ifPresent(this::updateBrokenLaunch);
+      updateBrokenCreatedLaunch(launchUuid, rq);
       throw new ReportPortalException(ErrorType.IMPORT_FILE_ERROR, cleanMessage(e));
     }
   }

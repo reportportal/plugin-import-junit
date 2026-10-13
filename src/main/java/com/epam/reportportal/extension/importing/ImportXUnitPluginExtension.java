@@ -20,8 +20,6 @@ import com.epam.ta.reportportal.dao.IntegrationRepository;
 import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
 import com.epam.ta.reportportal.dao.LaunchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,7 +59,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   private final Supplier<ApplicationListener<PluginEvent>> pluginLoadedListener;
 
-  private final RequestEntityConverter requestEntityConverter;
+  private final Supplier<RequestEntityConverter> requestEntityConverter;
 
   @Autowired
   private IntegrationTypeRepository integrationTypeRepository;
@@ -78,6 +76,9 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
   @Autowired
   private ApplicationContext applicationContext;
 
+  @Autowired
+  private ObjectMapper objectMapper;
+
   public ImportXUnitPluginExtension(Map<String, Object> initParams) {
     resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams)
         .map(String::valueOf).orElse("");
@@ -87,10 +88,8 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
             integrationRepository)
     ));
 
-    ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.registerModule(new JavaTimeModule());
-    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    requestEntityConverter = new RequestEntityConverter(objectMapper);
+    requestEntityConverter = new MemoizingSupplier<>(
+        () -> new RequestEntityConverter(objectMapper));
   }
 
   @PostConstruct
@@ -155,7 +154,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   private Map<String, CommonPluginCommand<?>> getCommonCommands() {
     HashMap<String, CommonPluginCommand<?>> pluginCommands = new HashMap<>();
-    var xunitImportCommand = new XUnitImportCommand(requestEntityConverter,
+    var xunitImportCommand = new XUnitImportCommand(requestEntityConverter.get(),
         eventPublisher, launchRepository);
     pluginCommands.put(xunitImportCommand.getName(), xunitImportCommand);
     return pluginCommands;
