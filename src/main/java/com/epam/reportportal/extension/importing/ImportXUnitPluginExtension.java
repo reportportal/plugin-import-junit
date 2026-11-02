@@ -23,7 +23,6 @@ import com.epam.reportportal.extension.importing.command.XUnitImportCommand;
 import com.epam.reportportal.extension.importing.event.plugin.PluginLoadedEventHandler;
 import com.epam.reportportal.extension.importing.utils.MemoizingSupplier;
 import com.epam.reportportal.extension.util.RequestEntityConverter;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +37,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.context.support.AbstractApplicationContext;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * @author Andrei Piankouski
@@ -90,7 +90,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
   private ProjectUserRepository projectUserRepository;
 
   @Autowired
-  ObjectMapper objectMapper;
+  JsonMapper jsonMapper;
 
   public ImportXUnitPluginExtension(Map<String, Object> initParams) {
     resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams)
@@ -101,7 +101,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
             integrationRepository)
     );
 
-    requestEntityConverter = new MemoizingSupplier<>(() -> new RequestEntityConverter(objectMapper));
+    requestEntityConverter = new MemoizingSupplier<>(() -> new RequestEntityConverter(jsonMapper));
   }
 
   @PostConstruct
@@ -145,11 +145,14 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     return params;
   }
 
+  // TODO: remove once service-api drops the deprecated abstract methods in ReportPortalExtensionPoint
+  @Deprecated
   @Override
   public CommonPluginCommand getCommonCommand(String commandName) {
     return null;
   }
 
+  @Deprecated
   @Override
   public PluginCommand getIntegrationCommand(String commandName) {
     return null;
