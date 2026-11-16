@@ -24,24 +24,24 @@ import static com.epam.reportportal.extension.importing.service.XunitReportTag.T
 import static com.epam.reportportal.extension.importing.service.XunitReportTag.TIMESTAMP;
 import static com.epam.reportportal.extension.importing.service.XunitReportTag.fromString;
 import static com.epam.reportportal.extension.importing.utils.DateUtils.toMillis;
-import static com.epam.ta.reportportal.entity.enums.TestItemIssueGroup.NOT_ISSUE_FLAG;
+import static com.epam.reportportal.base.infrastructure.persistence.entity.enums.TestItemIssueGroup.NOT_ISSUE_FLAG;
 import static java.util.Optional.ofNullable;
 
-import com.epam.reportportal.events.FinishItemRqEvent;
-import com.epam.reportportal.events.SaveLogRqEvent;
-import com.epam.reportportal.events.StartChildItemRqEvent;
-import com.epam.reportportal.events.StartRootItemRqEvent;
 import com.epam.reportportal.extension.importing.model.ItemInfo;
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.entity.enums.LogLevel;
-import com.epam.ta.reportportal.entity.enums.StatusEnum;
-import com.epam.ta.reportportal.entity.enums.TestItemTypeEnum;
-import com.epam.ta.reportportal.ws.reporting.FinishTestItemRQ;
-import com.epam.ta.reportportal.ws.reporting.Issue;
-import com.epam.ta.reportportal.ws.reporting.ItemAttributesRQ;
-import com.epam.ta.reportportal.ws.reporting.SaveLogRQ;
-import com.epam.ta.reportportal.ws.reporting.StartTestItemRQ;
+import com.epam.reportportal.base.infrastructure.events.FinishItemRqEvent;
+import com.epam.reportportal.base.infrastructure.events.SaveLogRqEvent;
+import com.epam.reportportal.base.infrastructure.events.StartChildItemRqEvent;
+import com.epam.reportportal.base.infrastructure.events.StartRootItemRqEvent;
+import com.epam.reportportal.base.infrastructure.persistence.entity.enums.LogLevel;
+import com.epam.reportportal.base.infrastructure.persistence.entity.enums.StatusEnum;
+import com.epam.reportportal.base.infrastructure.persistence.entity.enums.TestItemTypeEnum;
+import com.epam.reportportal.base.infrastructure.rules.exception.ErrorType;
+import com.epam.reportportal.base.infrastructure.rules.exception.ReportPortalException;
+import com.epam.reportportal.base.reporting.FinishTestItemRQ;
+import com.epam.reportportal.base.reporting.Issue;
+import com.epam.reportportal.base.reporting.ItemAttributesRQ;
+import com.epam.reportportal.base.reporting.SaveLogRQ;
+import com.epam.reportportal.base.reporting.StartTestItemRQ;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import java.time.Instant;
@@ -194,7 +194,7 @@ public class XunitImportHandler extends DefaultHandler {
     validateItemTime(time);
     currentTime = time;
     var rq = buildStartTestRq(attributes.getValue(ATTR_NAME.getValue()), time);
-    eventPublisher.publishEvent(new StartRootItemRqEvent(this, projectName, rq));
+    eventPublisher.publishEvent(new StartRootItemRqEvent(projectName, rq));
 
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
@@ -217,7 +217,7 @@ public class XunitImportHandler extends DefaultHandler {
         time);
     if (itemInfos.peek() != null) {
       eventPublisher.publishEvent(
-          new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+          new StartChildItemRqEvent(projectName, itemInfos.peek().getUuid(), rq));
     }
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
@@ -239,7 +239,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setStartTime(time);
 
     eventPublisher.publishEvent(
-        new StartChildItemRqEvent(this, projectName, itemInfos.peek().getUuid(), rq));
+        new StartChildItemRqEvent(projectName, itemInfos.peek().getUuid(), rq));
 
     var itemInfo = new ItemInfo();
     itemInfo.setUuid(rq.getUuid());
@@ -272,7 +272,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setDescription(itemInfo.getDescription());
 
     eventPublisher.publishEvent(
-        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
+        new FinishItemRqEvent(projectName, itemInfo.getUuid(), rq));
 
     status = null;
     currentTime = null;
@@ -296,7 +296,7 @@ public class XunitImportHandler extends DefaultHandler {
     rq.setDescription(itemInfo.getDescription());
 
     eventPublisher.publishEvent(
-        new FinishItemRqEvent(this, projectName, itemInfo.getUuid(), rq));
+        new FinishItemRqEvent(projectName, itemInfo.getUuid(), rq));
 
     status = null;
     currentTime = endTime;
@@ -310,8 +310,7 @@ public class XunitImportHandler extends DefaultHandler {
       saveLogRQ.setLogTime(itemInfos.peek().getStartTime());
       saveLogRQ.setMessage(message.toString().trim());
       saveLogRQ.setItemUuid(itemInfos.peek().getUuid());
-      eventPublisher.publishEvent(
-          new SaveLogRqEvent(this, projectName, saveLogRQ, null));
+      eventPublisher.publishEvent(new SaveLogRqEvent(projectName, saveLogRQ, null));
       message = new StringBuilder();
     }
   }

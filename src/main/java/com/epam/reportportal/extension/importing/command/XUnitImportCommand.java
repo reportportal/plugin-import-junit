@@ -3,20 +3,27 @@ package com.epam.reportportal.extension.importing.command;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
 import static com.epam.reportportal.extension.util.CommandParamUtils.ENTITY_PARAM;
-import static com.epam.reportportal.rules.commons.validation.BusinessRule.expect;
-import static com.epam.reportportal.rules.exception.ErrorType.BAD_REQUEST_ERROR;
-import static com.epam.reportportal.rules.exception.ErrorType.INCORRECT_REQUEST;
+import static com.epam.reportportal.base.infrastructure.rules.commons.validation.BusinessRule.expect;
+import static com.epam.reportportal.base.infrastructure.rules.exception.ErrorType.BAD_REQUEST_ERROR;
+import static com.epam.reportportal.base.infrastructure.rules.exception.ErrorType.INCORRECT_REQUEST;
 import static org.apache.commons.io.FileUtils.ONE_MB;
 
-import com.epam.reportportal.extension.CommonPluginCommand;
+import com.epam.reportportal.api.model.PluginCommandRQ;
+import com.epam.reportportal.extension.command.AbstractExtensionCommand;
 import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
 import com.epam.reportportal.extension.importing.service.ImportStrategy;
 import com.epam.reportportal.extension.importing.service.ImportStrategyFactory;
 import com.epam.reportportal.extension.util.RequestEntityConverter;
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.dao.LaunchRepository;
-import com.epam.ta.reportportal.ws.reporting.StartLaunchRS;
+import com.epam.reportportal.base.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.ProjectRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.ProjectUserRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.organization.OrganizationRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.organization.OrganizationUserRepository;
+import com.epam.reportportal.base.infrastructure.persistence.entity.organization.OrganizationRole;
+import com.epam.reportportal.base.infrastructure.persistence.entity.project.ProjectRole;
+import com.epam.reportportal.base.infrastructure.persistence.entity.user.UserRole;
+import com.epam.reportportal.base.infrastructure.rules.exception.ReportPortalException;
+import com.epam.reportportal.base.reporting.StartLaunchRS;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,7 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * @author Pavel Bortnik
  */
-public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
+public class XUnitImportCommand extends AbstractExtensionCommand<StartLaunchRS> {
 
   public static final long MAX_FILE_SIZE = 32 * ONE_MB;
   private static final String FILE_PARAM = "file";
@@ -38,22 +45,32 @@ public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
 
   public XUnitImportCommand(RequestEntityConverter requestEntityConverter,
       ApplicationEventPublisher eventPublisher,
-      LaunchRepository launchRepository) {
+      LaunchRepository launchRepository,
+      ProjectRepository projectRepository,
+      OrganizationUserRepository organizationUserRepository,
+      OrganizationRepository organizationRepository,
+      ProjectUserRepository projectUserRepository) {
+    super(projectRepository, organizationUserRepository, organizationRepository, projectUserRepository);
     this.requestEntityConverter = requestEntityConverter;
     this.launchRepository = launchRepository;
     this.importStrategyFactory = new ImportStrategyFactory(eventPublisher, launchRepository);
+
+    // Set required permission levels
+    this.minProjectRole = ProjectRole.EDITOR;
+    this.minOrgRole = OrganizationRole.MANAGER;
+    this.minUserRole = UserRole.ADMINISTRATOR;
   }
 
   @Override
-  public StartLaunchRS executeCommand(Map<String, Object> params) {
+  protected StartLaunchRS invokeCommand(PluginCommandRQ pluginCommandRq) {
+    Map<String, Object> params = pluginCommandRq.getArguments();
 
     LaunchImportRQ launchImportRQ = Optional.ofNullable(params.get(ENTITY_PARAM))
         .map(it -> requestEntityConverter.getEntity(ENTITY_PARAM, params, LaunchImportRQ.class))
         .orElseGet(LaunchImportRQ::new);
 
     MultipartFile file = (MultipartFile) Optional.ofNullable(params.get(FILE_PARAM))
-        .orElseThrow(() -> new ReportPortalException(
-            ErrorType.BAD_REQUEST_ERROR, "File for import wasn't provided"));
+        .orElseThrow(() -> new ReportPortalException(BAD_REQUEST_ERROR, "File for import wasn't provided"));
 
     validate(file);
 
@@ -61,8 +78,7 @@ public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
         file.getOriginalFilename());
 
     String projectName = Optional.ofNullable(params.get(PROJECT_NAME)).map(String::valueOf)
-        .orElseThrow(
-            () -> new ReportPortalException(BAD_REQUEST_ERROR, "Project name wasn't provided"));
+        .orElseThrow(() -> new ReportPortalException(BAD_REQUEST_ERROR, "Project name wasn't provided"));
 
     String launchUuid = importStrategy.importLaunch(file, projectName, launchImportRQ);
     return prepareLaunchImportResponse(launchUuid);
@@ -77,14 +93,10 @@ public class XUnitImportCommand implements CommonPluginCommand<StartLaunchRS> {
     expect(file.getOriginalFilename(), Objects::nonNull).verify(INCORRECT_REQUEST,
         "File name should be not empty."
     );
-    expect(file.getOriginalFilename(),
-        it -> it.endsWith(ZIP_EXTENSION) || it.endsWith(XML_EXTENSION)
-    ).verify(INCORRECT_REQUEST,
-        "Should be a zip archive or an xml file " + file.getOriginalFilename()
-    );
-    expect(file.getSize(), size -> size <= MAX_FILE_SIZE).verify(INCORRECT_REQUEST,
-        "File size is more than 32 Mb."
-    );
+    expect(file.getOriginalFilename(), it -> it.endsWith(ZIP_EXTENSION) || it.endsWith(XML_EXTENSION))
+        .verify(INCORRECT_REQUEST, "Should be a zip archive or an xml file " + file.getOriginalFilename()
+        );
+    expect(file.getSize(), size -> size <= MAX_FILE_SIZE).verify(INCORRECT_REQUEST, "File size is more than 32 Mb.");
   }
 
   private StartLaunchRS prepareLaunchImportResponse(String uuid) {

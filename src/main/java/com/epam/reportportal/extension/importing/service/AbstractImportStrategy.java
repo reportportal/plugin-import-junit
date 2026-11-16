@@ -18,18 +18,18 @@ package com.epam.reportportal.extension.importing.service;
 
 import static java.util.Optional.ofNullable;
 
-import com.epam.reportportal.events.FinishLaunchRqEvent;
-import com.epam.reportportal.events.StartLaunchRqEvent;
 import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.dao.LaunchRepository;
-import com.epam.ta.reportportal.entity.enums.StatusEnum;
-import com.epam.ta.reportportal.entity.launch.Launch;
-import com.epam.ta.reportportal.ws.reporting.FinishExecutionRQ;
-import com.epam.ta.reportportal.ws.reporting.ItemAttributesRQ;
-import com.epam.ta.reportportal.ws.reporting.Mode;
-import com.epam.ta.reportportal.ws.reporting.StartLaunchRQ;
+import com.epam.reportportal.base.infrastructure.events.FinishLaunchRqEvent;
+import com.epam.reportportal.base.infrastructure.events.StartLaunchRqEvent;
+import com.epam.reportportal.base.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.base.infrastructure.persistence.entity.enums.StatusEnum;
+import com.epam.reportportal.base.infrastructure.persistence.entity.launch.Launch;
+import com.epam.reportportal.base.infrastructure.rules.exception.ErrorType;
+import com.epam.reportportal.base.infrastructure.rules.exception.ReportPortalException;
+import com.epam.reportportal.base.reporting.FinishExecutionRQ;
+import com.epam.reportportal.base.reporting.ItemAttributesRQ;
+import com.epam.reportportal.base.reporting.Mode;
+import com.epam.reportportal.base.reporting.StartLaunchRQ;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
@@ -78,7 +78,7 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
     ofNullable(rq.getDescription()).ifPresent(startLaunchRQ::setDescription);
     startLaunchRQ.setMode(ofNullable(rq.getMode()).orElse(Mode.DEFAULT));
     startLaunchRQ.setAttributes(ofNullable(rq.getAttributes()).orElse(new HashSet<>()));
-    eventPublisher.publishEvent(new StartLaunchRqEvent(this, projectName, startLaunchRQ));
+    eventPublisher.publishEvent(new StartLaunchRqEvent(projectName, startLaunchRQ));
     return launchUuid;
   }
 
@@ -126,7 +126,7 @@ public abstract class AbstractImportStrategy implements ImportStrategy {
     FinishExecutionRQ finishExecutionRQ = new FinishExecutionRQ();
     finishExecutionRQ.setEndTime(results.getEndTime());
     eventPublisher.publishEvent(
-        new FinishLaunchRqEvent(this, projectName, launchUuid, finishExecutionRQ));
+        new FinishLaunchRqEvent(projectName, launchUuid, finishExecutionRQ));
   }
 
   protected Boolean isSkippedNotIssue(Set<ItemAttributesRQ> attributes) {

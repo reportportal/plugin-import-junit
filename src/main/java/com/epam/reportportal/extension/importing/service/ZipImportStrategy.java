@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.epam.reportportal.extension.importing.service;
 
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
 
+import com.epam.reportportal.base.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.base.infrastructure.rules.exception.ErrorType;
+import com.epam.reportportal.base.infrastructure.rules.exception.ReportPortalException;
 import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
-import com.epam.reportportal.rules.exception.ErrorType;
-import com.epam.reportportal.rules.exception.ReportPortalException;
-import com.epam.ta.reportportal.dao.LaunchRepository;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +33,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * @author <a href="mailto:ivan_budayeu@epam.com">Ivan Budayeu</a>
  */
+@Slf4j
 public class ZipImportStrategy extends AbstractImportStrategy {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ZipImportStrategy.class);
@@ -51,8 +54,7 @@ public class ZipImportStrategy extends AbstractImportStrategy {
 
   private final XunitParseService xunitParseService;
 
-  public ZipImportStrategy(ApplicationEventPublisher eventPublisher,
-      LaunchRepository launchRepository) {
+  public ZipImportStrategy(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository) {
     super(eventPublisher, launchRepository);
     this.xunitParseService = new XunitParseService(eventPublisher);
   }

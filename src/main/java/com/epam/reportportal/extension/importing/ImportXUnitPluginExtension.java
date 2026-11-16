@@ -5,20 +5,24 @@ import static com.epam.reportportal.extension.util.CommonConstants.DESCRIPTION_K
 import static com.epam.reportportal.extension.util.CommonConstants.IS_INTEGRATIONS_ALLOWED;
 import static com.epam.reportportal.extension.util.CommonConstants.METADATA;
 
+import com.epam.reportportal.base.core.events.domain.PluginUploadedEvent;
+import com.epam.reportportal.base.infrastructure.persistence.dao.IntegrationRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.IntegrationTypeRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.LaunchRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.ProjectRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.ProjectUserRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.organization.OrganizationRepository;
+import com.epam.reportportal.base.infrastructure.persistence.dao.organization.OrganizationUserRepository;
 import com.epam.reportportal.extension.CommonPluginCommand;
 import com.epam.reportportal.extension.IntegrationGroupEnum;
 import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
+import com.epam.reportportal.extension.command.ExtensionCommand;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
-import com.epam.reportportal.extension.event.PluginEvent;
 import com.epam.reportportal.extension.importing.command.XUnitImportCommand;
-import com.epam.reportportal.extension.importing.event.plugin.PluginEventHandlerFactory;
-import com.epam.reportportal.extension.importing.event.plugin.PluginEventListener;
+import com.epam.reportportal.extension.importing.event.plugin.PluginLoadedEventHandler;
 import com.epam.reportportal.extension.importing.utils.MemoizingSupplier;
 import com.epam.reportportal.extension.util.RequestEntityConverter;
-import com.epam.ta.reportportal.dao.IntegrationRepository;
-import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
-import com.epam.ta.reportportal.dao.LaunchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
@@ -49,15 +53,12 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   private static final String PLUGIN_NAME = "JUnit";
 
-  private final Supplier<Map<String, PluginCommand>> pluginCommandMapping = new MemoizingSupplier<>(
-      this::getCommands);
-
-  private final Supplier<Map<String, CommonPluginCommand<?>>> commonPluginCommandMapping = new MemoizingSupplier<>(
-      this::getCommonCommands);
+  private final Supplier<Map<String, ExtensionCommand<?>>> commonExtensionCommandMapping = new MemoizingSupplier<>(
+      this::getCommonExtensionCommandMapping);
 
   private final String resourcesDir;
 
-  private final Supplier<ApplicationListener<PluginEvent>> pluginLoadedListener;
+  private final Supplier<ApplicationListener<PluginUploadedEvent>> pluginLoadedListenerSupplier;
 
   private final Supplier<RequestEntityConverter> requestEntityConverter;
 
@@ -77,19 +78,30 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
   private ApplicationContext applicationContext;
 
   @Autowired
-  private ObjectMapper objectMapper;
+  private ProjectRepository projectRepository;
+
+  @Autowired
+  private OrganizationUserRepository organizationUserRepository;
+
+  @Autowired
+  private OrganizationRepository organizationRepository;
+
+  @Autowired
+  private ProjectUserRepository projectUserRepository;
+
+  @Autowired
+  ObjectMapper objectMapper;
 
   public ImportXUnitPluginExtension(Map<String, Object> initParams) {
     resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams)
         .map(String::valueOf).orElse("");
 
-    pluginLoadedListener = new MemoizingSupplier<>(() -> new PluginEventListener(PLUGIN_ID,
-        new PluginEventHandlerFactory(resourcesDir, integrationTypeRepository,
+    pluginLoadedListenerSupplier = new MemoizingSupplier<>(
+        () -> new PluginLoadedEventHandler(PLUGIN_ID, resourcesDir, integrationTypeRepository,
             integrationRepository)
-    ));
+    );
 
-    requestEntityConverter = new MemoizingSupplier<>(
-        () -> new RequestEntityConverter(objectMapper));
+    requestEntityConverter = new MemoizingSupplier<>(() -> new RequestEntityConverter(objectMapper));
   }
 
   @PostConstruct
@@ -102,7 +114,7 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
         AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
         ApplicationEventMulticaster.class
     );
-    applicationEventMulticaster.addApplicationListener(pluginLoadedListener.get());
+    applicationEventMulticaster.addApplicationListener(pluginLoadedListenerSupplier.get());
   }
 
   @Override
@@ -115,15 +127,15 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
         AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
         ApplicationEventMulticaster.class
     );
-    applicationEventMulticaster.removeApplicationListener(pluginLoadedListener.get());
+    applicationEventMulticaster.removeApplicationListener(pluginLoadedListenerSupplier.get());
   }
 
   @Override
   public Map<String, ?> getPluginParams() {
     Map<String, Object> params = new HashMap<>();
     params.put(NAME_FIELD, PLUGIN_NAME);
-    params.put(ALLOWED_COMMANDS, new ArrayList<>(pluginCommandMapping.get().keySet()));
-    params.put(COMMON_COMMANDS, new ArrayList<>(commonPluginCommandMapping.get().keySet()));
+    params.put(ALLOWED_COMMANDS, new ArrayList<>());
+    params.put(COMMON_COMMANDS, new ArrayList<>(commonExtensionCommandMapping.get().keySet()));
     params.put(DESCRIPTION_KEY, DESCRIPTION);
     params.put(METADATA, Map.of(IS_INTEGRATIONS_ALLOWED, false));
     params.put("maxFileSize", MAX_FILE_SIZE);
@@ -135,12 +147,12 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   @Override
   public CommonPluginCommand getCommonCommand(String commandName) {
-    return commonPluginCommandMapping.get().get(commandName);
+    return null;
   }
 
   @Override
   public PluginCommand getIntegrationCommand(String commandName) {
-    return pluginCommandMapping.get().get(commandName);
+    return null;
   }
 
   @Override
@@ -148,14 +160,16 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     return IntegrationGroupEnum.IMPORT;
   }
 
-  private Map<String, PluginCommand> getCommands() {
-    return new HashMap<>();
+  @Override
+  public Map<String, ExtensionCommand<?>> getCommonExtensionCommands() {
+    return commonExtensionCommandMapping.get();
   }
 
-  private Map<String, CommonPluginCommand<?>> getCommonCommands() {
-    HashMap<String, CommonPluginCommand<?>> pluginCommands = new HashMap<>();
+  private Map<String, ExtensionCommand<?>> getCommonExtensionCommandMapping() {
+    HashMap<String, ExtensionCommand<?>> pluginCommands = new HashMap<>();
     var xunitImportCommand = new XUnitImportCommand(requestEntityConverter.get(),
-        eventPublisher, launchRepository);
+        eventPublisher, launchRepository, projectRepository, organizationUserRepository,
+        organizationRepository, projectUserRepository);
     pluginCommands.put(xunitImportCommand.getName(), xunitImportCommand);
     return pluginCommands;
   }

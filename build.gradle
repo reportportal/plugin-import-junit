@@ -2,8 +2,9 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
     id 'java'
     id 'jacoco'
-    id "com.github.node-gradle.node" version "2.2.1"
-    id "org.springframework.boot" version "3.4.2" apply false
+    id 'com.gradleup.shadow' version '9.3.1'
+    id "com.github.node-gradle.node" version "7.1.0"
+    id("io.freefair.lombok") version "9.5.0"
 }
 
 
@@ -11,8 +12,9 @@ node {
     version = '20.11.0'
     npmVersion = '10.2.4'
     download = true
-    workDir = file("${project.buildDir}/plugin/ui")
-    nodeModulesDir = file("${project.rootDir}/plugin/ui")
+    workDir = layout.buildDirectory.dir('plugin/ui').get().asFile
+    npmWorkDir = layout.buildDirectory.dir('npm').get().asFile
+    nodeProjectDir = file("${project.rootDir}/plugin/ui")
 }
 
 npm_run_build {
@@ -28,15 +30,10 @@ apply from: scriptsUrl + '/signing.gradle'
 
 repositories {
     mavenLocal()
-    mavenCentral { url "https://repo1.maven.org/maven2" }
+    mavenCentral { url = "https://repo1.maven.org/maven2" }
+    maven { url "https://build.shibboleth.net/nexus/content/repositories/releases/" }
     if (!releaseMode) {
-        maven { url 'https://jitpack.io' }
-    }
-}
-
-dependencyManagement {
-    imports {
-        mavenBom(releaseMode ? 'com.epam.reportportal:commons-bom:' + getProperty('bom.version') : 'com.epam.reportportal:commons-bom:5.13.0')
+        maven { url = 'https://jitpack.io' }
     }
 }
 
@@ -44,16 +41,21 @@ ext['spring-boot.version'] = "${springBootVersion}"
 
 dependencies {
     if (releaseMode) {
-        implementation 'com.epam.reportportal:commons-dao'
-        implementation 'com.epam.reportportal:commons'
-        implementation 'com.epam.reportportal:plugin-api'
-        annotationProcessor 'com.epam.reportportal:plugin-api'
+        implementation 'com.epam.reportportal:service-api'
+        annotationProcessor 'com.epam.reportportal:service-api'
     } else {
-        implementation 'com.github.reportportal:commons-dao:5.15.7'
-        implementation 'com.github.reportportal:commons:5.15.3'
-        implementation 'com.github.reportportal:plugin-api:5.15.1'
-        annotationProcessor 'com.github.reportportal:plugin-api:5.15.1'
+        implementation 'com.github.reportportal:service-api:73c327819e'
+        annotationProcessor 'com.github.reportportal:service-api:73c327819e'
     }
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'org.springframework:spring-context'
+    implementation 'org.springframework:spring-web'
+    implementation 'org.springframework.data:spring-data-jpa'
+    implementation "org.springframework:spring-test"
+    implementation 'org.hibernate.orm:hibernate-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 test {
@@ -70,9 +72,7 @@ test {
 
 build.dependsOn jacocoTestReport
 
-artifacts {
-    archives shadowJar
-}
+assemble.dependsOn shadowJar
 
 generatePomFileForShadowPublication { pom.packaging = "jar" }
 
@@ -112,7 +112,7 @@ shadowJar {
         into("/resources")
     }
     configurations = [project.configurations.compileClasspath]
-    zip64 true
+    zip64 = true
     dependencies {
         include(dependency('commons-io:commons-io:2.15.1'))
     }
