@@ -39,14 +39,18 @@ repositories {
 
 ext['spring-boot.version'] = "${springBootVersion}"
 
+def serviceApiVersion = System.getenv('SERVICE_API_VERSION')
+if (releaseMode && !serviceApiVersion) {
+    throw new GradleException('SERVICE_API_VERSION environment variable is required in release mode')
+}
+
+def serviceApi = releaseMode
+        ? "com.epam.reportportal:service-api:${serviceApiVersion}"
+        : 'com.github.reportportal:service-api:73c327819e'
+
 dependencies {
-    if (releaseMode) {
-        implementation 'com.epam.reportportal:service-api'
-        annotationProcessor 'com.epam.reportportal:service-api'
-    } else {
-        implementation 'com.github.reportportal:service-api:73c327819e'
-        annotationProcessor 'com.github.reportportal:service-api:73c327819e'
-    }
+    implementation serviceApi
+    annotationProcessor serviceApi
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     implementation 'org.springframework:spring-context'
