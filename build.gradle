@@ -42,8 +42,8 @@ dependencies {
         implementation 'com.epam.reportportal:service-api:${serviceApiVersion}'
         annotationProcessor 'com.epam.reportportal:service-api:${serviceApiVersion}'
     } else {
-        implementation 'com.github.reportportal:service-api:73c327819e'
-        annotationProcessor 'com.github.reportportal:service-api:73c327819e'
+        implementation 'com.github.reportportal:service-api:9250fe3'
+        annotationProcessor 'com.github.reportportal:service-api:9250fe3'
     }
     implementation 'tools.jackson.core:jackson-databind'
 
