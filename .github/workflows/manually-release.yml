@@ -9,14 +9,14 @@ on:
       scripts_version:
         description: 'Gradle scripts version'
         required: true
-      bom_version:
-        description: 'Commons bom version'
+      service_api_version:
+        description: 'Service API version'
         required: true
 
 env:
   GH_USER_NAME: github.actor
   SCRIPTS_VERSION: ${{ github.event.inputs.scripts_version }}
-  BOM_VERSION: ${{ github.event.inputs.bom_version }}
+  SERVICE_API_VERSION: ${{ github.event.inputs.service_api_version }}
   REPOSITORY_URL: 'https://maven.pkg.github.com/'
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
       - name: Release with Gradle
         id: release
         run: |
-          ./gradlew release -PreleaseMode -Pscripts.version=${{env.SCRIPTS_VERSION}} -Pbom.version=${{env.BOM_VERSION}} \
+          ./gradlew release -PreleaseMode -Pscripts.version=${{env.SCRIPTS_VERSION}} \
           -PgithubUserName=${{env.GH_USER_NAME}} -PgithubToken=${{secrets.GITHUB_TOKEN}} \
           -PpublishRepo=${{ env.REPOSITORY_URL }}${{ github.repository }} \
           -PgpgPassphrase=${{secrets.GPG_PASSPHRASE}} -PgpgPrivateKey="${{secrets.GPG_PRIVATE_KEY}}"
