@@ -37,15 +37,6 @@ repositories {
 }
 
 
-def serviceApiVersion = System.getenv('SERVICE_API_VERSION')
-if (releaseMode && !serviceApiVersion) {
-    throw new GradleException('SERVICE_API_VERSION environment variable is required in release mode')
-}
-
-def serviceApi = releaseMode
-        ? "com.epam.reportportal:service-api:${serviceApiVersion}"
-        : 'com.github.reportportal:service-api:73c327819e'
-
 dependencies {
     if (releaseMode) {
         implementation 'com.epam.reportportal:service-api:${serviceApiVersion}'
