@@ -32,11 +32,13 @@ import java.util.function.Supplier;
 import org.pf4j.Extension;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.util.unit.DataSize;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -91,6 +93,9 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
 
   @Autowired
   JsonMapper jsonMapper;
+
+  @Value("${spring.servlet.multipart.max-file-size:128MB}")
+  private String maxUncompressedSize;
 
   public ImportXUnitPluginExtension(Map<String, Object> initParams) {
     resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams)
@@ -172,7 +177,8 @@ public class ImportXUnitPluginExtension implements ReportPortalExtensionPoint, D
     HashMap<String, ExtensionCommand<?>> pluginCommands = new HashMap<>();
     var xunitImportCommand = new XUnitImportCommand(requestEntityConverter.get(),
         eventPublisher, launchRepository, projectRepository, organizationUserRepository,
-        organizationRepository, projectUserRepository);
+        organizationRepository, projectUserRepository,
+        DataSize.parse(maxUncompressedSize).toBytes());
     pluginCommands.put(xunitImportCommand.getName(), xunitImportCommand);
     return pluginCommands;
   }

@@ -1,19 +1,14 @@
 package com.epam.reportportal.extension.importing.command;
 
-import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
-import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
-import static com.epam.reportportal.extension.util.CommandParamUtils.ENTITY_PARAM;
 import static com.epam.reportportal.base.infrastructure.rules.commons.validation.BusinessRule.expect;
 import static com.epam.reportportal.base.infrastructure.rules.exception.ErrorType.BAD_REQUEST_ERROR;
 import static com.epam.reportportal.base.infrastructure.rules.exception.ErrorType.INCORRECT_REQUEST;
+import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
+import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
+import static com.epam.reportportal.extension.util.CommandParamUtils.ENTITY_PARAM;
 import static org.apache.commons.io.FileUtils.ONE_MB;
 
 import com.epam.reportportal.api.model.PluginCommandRQ;
-import com.epam.reportportal.extension.command.AbstractExtensionCommand;
-import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
-import com.epam.reportportal.extension.importing.service.ImportStrategy;
-import com.epam.reportportal.extension.importing.service.ImportStrategyFactory;
-import com.epam.reportportal.extension.util.RequestEntityConverter;
 import com.epam.reportportal.base.infrastructure.persistence.dao.LaunchRepository;
 import com.epam.reportportal.base.infrastructure.persistence.dao.ProjectRepository;
 import com.epam.reportportal.base.infrastructure.persistence.dao.ProjectUserRepository;
@@ -24,6 +19,11 @@ import com.epam.reportportal.base.infrastructure.persistence.entity.project.Proj
 import com.epam.reportportal.base.infrastructure.persistence.entity.user.UserRole;
 import com.epam.reportportal.base.infrastructure.rules.exception.ReportPortalException;
 import com.epam.reportportal.base.reporting.StartLaunchRS;
+import com.epam.reportportal.extension.command.AbstractExtensionCommand;
+import com.epam.reportportal.extension.importing.model.LaunchImportRQ;
+import com.epam.reportportal.extension.importing.service.ImportStrategy;
+import com.epam.reportportal.extension.importing.service.ImportStrategyFactory;
+import com.epam.reportportal.extension.util.RequestEntityConverter;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,11 +49,13 @@ public class XUnitImportCommand extends AbstractExtensionCommand<StartLaunchRS> 
       ProjectRepository projectRepository,
       OrganizationUserRepository organizationUserRepository,
       OrganizationRepository organizationRepository,
-      ProjectUserRepository projectUserRepository) {
+      ProjectUserRepository projectUserRepository,
+      long maxUncompressedBytes) {
     super(projectRepository, organizationUserRepository, organizationRepository, projectUserRepository);
     this.requestEntityConverter = requestEntityConverter;
     this.launchRepository = launchRepository;
-    this.importStrategyFactory = new ImportStrategyFactory(eventPublisher, launchRepository);
+    this.importStrategyFactory = new ImportStrategyFactory(eventPublisher, launchRepository,
+        maxUncompressedBytes);
 
     // Set required permission levels
     this.minProjectRole = ProjectRole.EDITOR;
