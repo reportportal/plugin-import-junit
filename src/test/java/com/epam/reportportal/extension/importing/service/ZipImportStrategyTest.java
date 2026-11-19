@@ -57,7 +57,8 @@ class ZipImportStrategyTest {
   @Test
   void shouldImportArchiveWithinLimits() throws IOException {
     when(launchRepository.findByUuid(anyString())).thenReturn(Optional.of(launch));
-    ZipImportStrategy strategy = new ZipImportStrategy(events::add, launchRepository);
+    ZipImportStrategy strategy = new ZipImportStrategy(events::add, launchRepository,
+        128 * 1024 * 1024L);
 
     String launchUuid = strategy.importLaunch(zip("a/TEST-1.xml", "b/TEST-2.xml"), "project",
         new LaunchImportRQ());
