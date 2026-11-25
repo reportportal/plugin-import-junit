@@ -18,7 +18,6 @@ package com.epam.reportportal.extension.importing.service;
 
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.XML_EXTENSION;
 import static com.epam.reportportal.extension.importing.service.FileExtensionConstant.ZIP_EXTENSION;
-import static org.apache.commons.io.FileUtils.ONE_MB;
 
 import com.epam.reportportal.base.infrastructure.persistence.dao.LaunchRepository;
 import com.epam.reportportal.base.infrastructure.rules.exception.ErrorType;
@@ -48,10 +47,9 @@ import org.springframework.web.multipart.MultipartFile;
 public class ZipImportStrategy extends AbstractImportStrategy {
 
   /**
-   * Zip bomb protection: the upload itself is limited to 32 MB, these limits apply to its content.
+   * Zip bomb protection: these limits apply to the archive content.
    */
   static final int MAX_ENTRIES = 10_000;
-  static final long MAX_UNCOMPRESSED_BYTES = 512 * ONE_MB;
 
   private static final Predicate<ZipEntry> isFile = zipEntry -> !zipEntry.isDirectory();
   private static final Predicate<ZipEntry> isXml =
@@ -61,8 +59,9 @@ public class ZipImportStrategy extends AbstractImportStrategy {
   private final int maxEntries;
   private final long maxUncompressedBytes;
 
-  public ZipImportStrategy(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository) {
-    this(eventPublisher, launchRepository, MAX_ENTRIES, MAX_UNCOMPRESSED_BYTES);
+  public ZipImportStrategy(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository,
+      long maxUncompressedBytes) {
+    this(eventPublisher, launchRepository, MAX_ENTRIES, maxUncompressedBytes);
   }
 
   ZipImportStrategy(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository,

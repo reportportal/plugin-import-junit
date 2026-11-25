@@ -16,9 +16,10 @@ public class ImportStrategyFactory {
 
   private final Map<String, ImportStrategy> STRATEGY_MAPPING;
 
-  public ImportStrategyFactory(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository) {
+  public ImportStrategyFactory(ApplicationEventPublisher eventPublisher, LaunchRepository launchRepository,
+      long maxUncompressedBytes) {
     STRATEGY_MAPPING = ImmutableMap.<String, ImportStrategy>builder()
-        .put(ZIP_EXTENSION, new ZipImportStrategy(eventPublisher, launchRepository))
+        .put(ZIP_EXTENSION, new ZipImportStrategy(eventPublisher, launchRepository, maxUncompressedBytes))
         .put(XML_EXTENSION, new XmlImportStrategy(eventPublisher, launchRepository)).build();
   }
 

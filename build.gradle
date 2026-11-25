@@ -36,23 +36,22 @@ repositories {
     }
 }
 
+
 dependencies {
     if (releaseMode) {
-        implementation 'com.epam.reportportal:service-api'
-        annotationProcessor('com.epam.reportportal:service-api') {
-            exclude group: 'org.springframework.modulith', module: 'spring-modulith-apt'
-        }
+        implementation 'com.epam.reportportal:service-api:${serviceApiVersion}'
+        annotationProcessor 'com.epam.reportportal:service-api:${serviceApiVersion}'
     } else {
-        implementation 'com.github.reportportal:service-api:d4b2f7c'
-        annotationProcessor('com.github.reportportal:service-api:d4b2f7c') {
-            exclude group: 'org.springframework.modulith', module: 'spring-modulith-apt'
-        }
+        implementation 'com.github.reportportal:service-api:9250fe3'
+        annotationProcessor 'com.github.reportportal:service-api:9250fe3'
     }
     implementation 'tools.jackson.core:jackson-databind'
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.springframework:spring-test'
     testImplementation 'org.mockito:mockito-core'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
